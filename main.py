@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 
+from poll.routers.health_check import health_check_router
+
 app = FastAPI()
 
-
-@app.get("/")
-async def health_check():
-    return {"status_code": 200, "detail": "ok", "result": "working"}
+app.include_router(health_check_router)
