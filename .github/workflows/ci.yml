@@ -16,6 +16,4 @@ jobs:
       - name: Run formatters
         run: poetry run black --check . && poetry run isort --check . --profile black
       - name: Open shell and run tests
-        run:
-          poetry shell
-          pytest
+        run: poetry run pytest
