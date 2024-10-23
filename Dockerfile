@@ -13,7 +13,6 @@ ENV APP_ENV=${APP_ENV:-development} \
   POETRY_CACHE_DIR='/var/cache/pypoetry' \
   SERVER_PORT=8080
 
-# Install system dependencies
 RUN apt-get update \
     && apt-get install --no-install-recommends -y libpq-dev \
     && apt-get autoremove -y \
@@ -30,8 +29,6 @@ COPY ./pyproject.toml ./poetry.lock ./README.md /app/
 RUN  poetry install --no-root --only main
 
 
-
-# Third stage: Deployment
 FROM base AS prod
 
 COPY . .
@@ -47,7 +44,7 @@ COPY . .
 
 CMD ["bash", "-c", "uvicorn main:app --host 0.0.0.0 --port $SERVER_PORT --reload"]
 
-# Second stage: Testing
+
 FROM dev AS test
 
 CMD ["bash", "-c", "pytest"]
