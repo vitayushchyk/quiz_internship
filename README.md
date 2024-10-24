@@ -15,13 +15,28 @@
 Please, make sure that you have a .env in the root folder. Feel free to specify values of environmental variables as you
 wish, but make sure that your .env file structured like .env.example.
 
-## Commands:
+## Run app:
 
 - Run application:
 
       fastapi dev main.py
--
-- Interactive API docs:
+
+## Run app with Docker:
+
+Firstly, you need to have [Docker](https://docs.docker.com/get-docker/) installed in your system.
+
+- Run application:
+
+      make run_app
+- Create migration. Usage `make create_migrations m="migration message"`:
+
+      create_migrations
+
+- Apply migrations:
+
+      migrate
+
+## Interactive API docs:
 
       http://host:port/docs
 
