@@ -7,12 +7,11 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-
     postgres_db: str
     postgres_user: SecretStr
     postgres_password: SecretStr
 
-    db_host: str = 'db'
+    db_host: str = "db"
     echo_query: bool = True
     db_port: int = 5432
 
@@ -20,7 +19,6 @@ class Settings(BaseSettings):
     cors_allow_credentials: bool = True
     cors_allow_methods: list[str] = ["*"]
     cors_allow_headers: list[str] = ["*"]
-
 
     db_connection_uri: PostgresDsn | None = None
 
@@ -34,10 +32,11 @@ class Settings(BaseSettings):
             port=int(info.data.get("db_port")),  # type: ignore
             path=info.data.get("postgres_db"),
             username=info.data.get("postgres_user").get_secret_value(),  # type: ignore[union-attr]
-            password=urllib.parse.quote(info.data.get("postgres_password").get_secret_value()),
+            password=urllib.parse.quote(
+                info.data.get("postgres_password").get_secret_value()
+            ),
             # type: ignore[union-attr]
         )
-
 
 
 settings = Settings()

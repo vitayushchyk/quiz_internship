@@ -14,9 +14,9 @@ help: ## Display help message
 	@echo "Please use \`make <target>' where <target> is one of"
 	@perl -nle'print $& if m{^[\.a-zA-Z_-]+:.*?## .*$$}' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m  %-25s\033[0m %s\n", $$1, $$2}'
 
-build_and_run: ## Run and build application
-	 docker compose up -d --build 
 
+
+run_app: .build/img
 run_app:  ## Run application
 	docker compose up -d
 
@@ -35,6 +35,9 @@ migrate: run_app ## Apply migrations
 undo_last_migration: run_app
 	docker compose exec api alembic downgrade -1
 
+lint_check: run_app
+lint_check: ## run static checkers & fix issues
+	docker compose exec api poetry run black . && poetry run isort . --profile black
 
 open_shell: ## Open shell to the app container
 	docker compose exec api bash
@@ -42,3 +45,10 @@ open_shell: ## Open shell to the app container
 open_log: ## Open api log
 	docker compose logs -f api
 
+build: ## Rebuild application
+	docker compose build
+
+.build/img: Dockerfile docker-compose.yml poetry.lock pyproject.toml
+	docker compose build
+	mkdir -p .build
+	touch .build/img

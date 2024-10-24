@@ -6,7 +6,6 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-
 from poll.core.conf import settings
 
 # this is the Alembic Config object, which provides
@@ -19,13 +18,14 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 from sqlmodel import SQLModel  # noqa
+
 from poll.schemas.check_alembic import *  # noqa
 
 target_metadata = SQLModel.metadata
 
 config.set_main_option(
     name="sqlalchemy.url",
-    value=settings.db_connection_uri.unicode_string().replace('%', '%%')
+    value=settings.db_connection_uri.unicode_string().replace("%", "%%"),
 )
 
 
