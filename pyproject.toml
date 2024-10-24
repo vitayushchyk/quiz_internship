@@ -10,6 +10,11 @@ python = "^3.12"
 fastapi = { extras = ["standard"], version = "^0.115.2" }
 uvicorn = "^0.32.0"
 pydantic-settings = "^2.6.0"
+alembic = "^1.13.3"
+aioredis = "^2.0.1"
+sqlmodel = "^0.0.22"
+sqlalchemy = { extras = ["asyncio"], version = "^2.0.29" }
+asyncpg = "^0.30.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
