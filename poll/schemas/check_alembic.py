@@ -1,11 +1,13 @@
-from typing import Optional
+from sqlalchemy import Column, Integer, String
 
-from sqlmodel import Field, SQLModel
+from poll.db.connection import Base
 
 
 # ToDo(Vita): this model for test alembic migration. delete it when real model will be added
-class TestUser(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    name: str
-    secret_name: str
-    age: Optional[int] = None
+class TestUser(Base):
+    __tablename__ = "test_user"
+
+    id = Column(Integer, primary_key=True, nullable=True)
+    name = Column(String)
+    secret_name = Column(String)
+    age = Column(Integer, nullable=True)

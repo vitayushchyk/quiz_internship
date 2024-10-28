@@ -1,8 +1,7 @@
-import urllib
-from typing import Any
+from urllib.parse import quote
 
-from pydantic import PostgresDsn, SecretStr, field_validator
-from pydantic_core.core_schema import ValidationInfo
+from fastapi import HTTPException
+from pydantic import PostgresDsn, SecretStr
 from pydantic_settings import BaseSettings
 
 
@@ -20,23 +19,21 @@ class Settings(BaseSettings):
     cors_allow_methods: list[str] = ["*"]
     cors_allow_headers: list[str] = ["*"]
 
-    db_connection_uri: PostgresDsn | None = None
-
-    @field_validator("db_connection_uri", mode="before")
-    def assemble_db_connection_uri(cls, v: str | None, info: ValidationInfo) -> Any:
-        if isinstance(v, str):
-            return v
+    @property
+    def db_connection_uri(self) -> PostgresDsn | None:
+        if self.postgres_db is None:
+            raise HTTPException(
+                status_code=500, detail="Missing required setting: postgres_db"
+            )
         return PostgresDsn.build(
             scheme="postgresql+asyncpg",
-            host=info.data.get("db_host"),
-            port=int(info.data.get("db_port")),  # type: ignore
-            path=info.data.get("postgres_db"),
-            username=info.data.get("postgres_user").get_secret_value(),  # type: ignore[union-attr]
-            password=urllib.parse.quote(
-                info.data.get("postgres_password").get_secret_value()
-            ),
-            # type: ignore[union-attr]
+            host=self.db_host,
+            port=self.db_port,
+            path=self.postgres_db,
+            username=self.postgres_user.get_secret_value(),
+            password=quote(self.postgres_password.get_secret_value()),
         )
+        # type: ignore[union-attr]
 
 
 settings = Settings()

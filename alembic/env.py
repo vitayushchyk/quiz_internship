@@ -17,11 +17,10 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-from sqlmodel import SQLModel  # noqa
-
+from poll.db.connection import Base
 from poll.schemas.check_alembic import *  # noqa
 
-target_metadata = SQLModel.metadata
+target_metadata = Base.metadata
 
 config.set_main_option(
     name="sqlalchemy.url",
