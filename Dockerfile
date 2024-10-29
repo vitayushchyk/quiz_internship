@@ -13,12 +13,6 @@ ENV APP_ENV=${APP_ENV:-development} \
   POETRY_CACHE_DIR='/var/cache/pypoetry' \
   SERVER_PORT=8080
 
-RUN apt-get update \
-    && apt-get install --no-install-recommends -y libpq-dev \
-    && apt-get autoremove -y \
-    && apt-get clean -y \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN pip install "poetry==$POETRY_VERSION"
 
 RUN mkdir /app

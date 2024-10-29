@@ -6,6 +6,16 @@ on:
 jobs:
   code-qality:
     runs-on: ubuntu-latest
+    env:
+      DEBUG: 1
+      SERVER_PORT: 8080
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test_pass
+      POSTGRES_DB: test_db
+      DB_HOST: db
+      DB_PORT: 5432
+      BROKER_URL: "redis://broker:6379/0"
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

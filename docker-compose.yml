@@ -1,0 +1,48 @@
+version: '3.12'
+
+services:
+  api:
+    build:
+      context: .
+      target: dev
+      args:
+        APP_ENV: development
+    command: [ "bash", "-c", "uvicorn main:app --host 0.0.0.0 --port ${SERVER_PORT} --reload" ]
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    volumes:
+      - ".:/app"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    env_file:
+      - .env
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1" ]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+
+
+volumes:
+  postgres_data:
+    
