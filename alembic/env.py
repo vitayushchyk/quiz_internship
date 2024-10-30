@@ -17,7 +17,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-from poll.schemas.check_alembic import *  # noqa
+from poll.db.connection import Base  # noqa
+from poll.db.model_users import *  # noqa
 
 target_metadata = Base.metadata
 
