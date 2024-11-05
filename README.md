@@ -28,13 +28,21 @@ Firstly, you need to have [Docker](https://docs.docker.com/get-docker/) installe
 - Run application:
 
       make run_app
+
+## Apply migrations with Alembic
+
 - Create migration. Usage `make create_migrations m="migration message"`:
 
-      create_migrations
+      make create_migrations
 
 - Apply migrations:
 
-      migrate
+      make migrate
+
+## Run test:
+- Run test
+
+      make run_test
 
 ## Interactive API docs:
 

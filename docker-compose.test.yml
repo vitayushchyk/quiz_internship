@@ -1,0 +1,49 @@
+version: '3.12'
+
+services:
+  db-test:
+    container_name: db-test
+    image: postgres:17-alpine
+    restart: unless-stopped
+    env_file:
+      - .env.test
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1" ]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  db-initializer:
+    build:
+      dockerfile: Dockerfile
+      context: .
+      target: test
+    volumes:
+      - ".:/app"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    links:
+      - db-test
+    depends_on:
+      db-test:
+        condition: service_healthy
+    env_file:
+      - .env.test
+    command: bash -c "alembic downgrade base; alembic upgrade head"
+
+  api-test:
+    build:
+      dockerfile: Dockerfile
+      context: .
+      target: test
+    volumes:
+      - ".:/app"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    links:
+      - db-test
+    depends_on:
+      db-initializer:
+        condition: service_completed_successfully
+    env_file:
+      - .env.test
