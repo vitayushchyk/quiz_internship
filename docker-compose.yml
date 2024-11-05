@@ -10,6 +10,8 @@ services:
     command: [ "bash", "-c", "uvicorn main:app --host 0.0.0.0 --port ${SERVER_PORT} --reload" ]
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ".:/app"
     env_file:
@@ -42,7 +44,5 @@ services:
     ports:
       - "6379:6379"
 
-
 volumes:
   postgres_data:
-    

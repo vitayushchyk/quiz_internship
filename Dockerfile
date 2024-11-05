@@ -33,6 +33,8 @@ CMD ["bash", "-c", "uvicorn main:app --host 0.0.0.0 --port $SERVER_PORT"]
 FROM base AS dev
 
 RUN  poetry install --no-root
+# Note: install by pip, because of bug of adding to poetry
+RUN pip install pydevd-pycharm
 
 COPY . .
 
