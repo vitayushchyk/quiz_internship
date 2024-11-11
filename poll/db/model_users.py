@@ -17,7 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from poll.db.connection import Base
 from poll.schemas.users import SignUpReq, UserUpdateRes
-from poll.services.exc.user import UserNotFound
 from poll.services.pagination import Pagination
 from poll.services.password_hasher import PasswordHasher
 
@@ -55,10 +54,7 @@ class UserRepository:
     async def get_user_by_id(self, user_id: int) -> User | None:
         logger.info("Fetching user by ID: %s", user_id)
         query = select(User).filter(User.id == user_id)
-        result = (await self.session.execute(query)).scalar()
-        if result is None:
-            raise UserNotFound(user_id)
-        return result
+        return (await self.session.execute(query)).scalar()
 
     async def create_user(self, user: SignUpReq) -> User:
         logger.info("Creating user: %s", user)
@@ -71,12 +67,8 @@ class UserRepository:
         await self.session.refresh(new_user)
         return new_user
 
-    async def update_user(self, user_id: int, user_upd: UserUpdateRes) -> User:
+    async def update_user(self, user: User, user_upd: UserUpdateRes) -> User:
         logger.info("Updating user: %s", user_upd)
-        result = await self.session.execute(select(User).filter(User.id == user_id))
-        user = result.scalars().first()
-        if user is None:
-            raise UserNotFound(user_id)
         for field, value in user_upd.dict(exclude_unset=True).items():
             setattr(user, field, value)
         await self.session.commit()
@@ -87,8 +79,6 @@ class UserRepository:
         logger.info("Deleting user: %s", user_id)
         result = await self.session.execute(select(User).filter(User.id == user_id))
         user = result.scalars().first()
-        if not user:
-            raise UserNotFound(user_id)
         await self.session.delete(user)
         await self.session.commit()
         return user
