@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from poll.core.deps import get_user_crud
 from poll.schemas.users import SignUpReq, UserDetailRes, UserUpdateRes
-from poll.services.exc.user import UserNotFound
+from poll.services.exc.user import UserAlreadyExist, UserNotFound
 from poll.services.users import UserCRUD
 
 router_user = APIRouter(prefix="/user")
@@ -49,4 +49,11 @@ async def user_not_found_handler(_: Request, exc: UserNotFound):
     return JSONResponse(
         content={"details": exc.detail},
         status_code=status.HTTP_404_NOT_FOUND,
+    )
+
+
+async def user_already_exists_handler(_: Request, exc: UserAlreadyExist):
+    return JSONResponse(
+        content={"details": exc.detail},
+        status_code=status.HTTP_409_CONFLICT,
     )

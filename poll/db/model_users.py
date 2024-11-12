@@ -2,6 +2,7 @@ import datetime
 from logging import getLogger
 from typing import Any, Sequence
 
+from asyncpg import UniqueViolationError
 from sqlalchemy import (
     Boolean,
     Column,
@@ -13,12 +14,12 @@ from sqlalchemy import (
     func,
     select,
 )
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from poll.db.connection import Base
 from poll.schemas.users import SignUpReq, UserUpdateRes
 from poll.services.pagination import Pagination
-from poll.services.password_hasher import PasswordHasher
 
 logger = getLogger(__name__)
 
@@ -38,10 +39,12 @@ class User(Base):
     )
 
 
+class UniqueViolation(Exception): ...
+
+
 class UserRepository:
-    def __init__(self, session: AsyncSession, hasher: PasswordHasher = None):
+    def __init__(self, session: AsyncSession):
         self.session = session
-        self.hasher = hasher
 
     async def get_all_users(
         self, page: int = 1, page_size: int = 10
@@ -59,13 +62,16 @@ class UserRepository:
     async def create_user(self, user: SignUpReq) -> User:
         logger.info("Creating user: %s", user)
         model_dump = user.model_dump()
-        model_dump["password"] = self.hasher.hash_password(user.password)
         new_user = User(**model_dump)
-        self.session.add(new_user)
-
-        await self.session.commit()
-        await self.session.refresh(new_user)
-        return new_user
+        try:
+            self.session.add(new_user)
+            await self.session.commit()
+            await self.session.refresh(new_user)
+            return new_user
+        except IntegrityError as e:
+            if UniqueViolationError.sqlstate == e.orig.sqlstate:
+                raise UniqueViolation
+            raise Exception("Unknown integrity error")
 
     async def update_user(self, user: User, user_upd: UserUpdateRes) -> User:
         logger.info("Updating user: %s", user_upd)
