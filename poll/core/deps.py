@@ -15,12 +15,12 @@ async def get_password_hasher():
 
 async def get_user_repository(
     session: AsyncSession = Depends(get_async_session),
-    hasher: PasswordHasher = Depends(get_password_hasher),
 ) -> AsyncGenerator[UserRepository, None]:
-    yield UserRepository(session, hasher)
+    yield UserRepository(session)
 
 
 async def get_user_crud(
     user_repository: UserRepository = Depends(get_user_repository),
+    hasher: PasswordHasher = Depends(get_password_hasher),
 ) -> AsyncGenerator[UserCRUD, None]:
-    yield UserCRUD(user_repository)
+    yield UserCRUD(user_repository, hasher)
