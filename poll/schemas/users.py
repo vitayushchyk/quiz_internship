@@ -1,8 +1,16 @@
+import re
 from typing import List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, field_validator
 
-from poll.db.model_users import User
+
+def validate_name(name: str) -> str:
+    data_pattern = r"^[^\d^Ы^ы^Ё^ё^Э^э\W']+$"
+    if not re.match(data_pattern, name):
+        raise ValueError(
+            "First and last names can contain only letters and an apostrophe"
+        )
+    return name.title()
 
 
 class UserSchema(BaseModel):
@@ -16,28 +24,36 @@ class UserSchema(BaseModel):
         orm_mode = True
 
 
-class SignIn(BaseModel):
+class SignInReq(BaseModel):
     email: str
     password: str
 
 
-class SignUp(BaseModel):
+class SignUpReq(BaseModel):
     first_name: str
     last_name: str
-    email: str
+    email: EmailStr
     password: str
 
-
-class UserUpdate(BaseModel):
-    first_name: str | None = Field(default=None, alias="firstName")
-    last_name: str | None = Field(default=None, alias="lastName")
-
-
-class UsersList(BaseModel):
-    users: List[User]
+    @field_validator("first_name", "last_name", mode="before", check_fields=False)
+    def _validate_names(cls, v):
+        return validate_name(v)
 
 
-class UserDetail(BaseModel):
+class UserUpdateRes(BaseModel):
+    first_name: str
+    last_name: str
+
+    @field_validator("first_name", "last_name", mode="before", check_fields=False)
+    def _validate_names(cls, v):
+        return validate_name(v)
+
+
+class UsersListRes(BaseModel):
+    users: List[UserSchema]
+
+
+class UserDetailRes(BaseModel):
     id: int
     first_name: str
     last_name: str

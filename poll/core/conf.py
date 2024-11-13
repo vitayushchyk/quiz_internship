@@ -1,3 +1,4 @@
+import logging
 from urllib.parse import quote
 
 from fastapi import HTTPException
@@ -19,6 +20,8 @@ class Settings(BaseSettings):
     cors_allow_methods: list[str] = ["*"]
     cors_allow_headers: list[str] = ["*"]
 
+    log_level: str = "INFO"
+
     @property
     def db_connection_uri(self) -> PostgresDsn | None:
         if self.postgres_db is None:
@@ -34,6 +37,13 @@ class Settings(BaseSettings):
             password=quote(self.postgres_password.get_secret_value()),
         )
         # type: ignore[union-attr]
+
+    def get_log_level(self) -> int:
+        return {
+            "info": logging.INFO,
+            "debug": logging.DEBUG,
+            "error": logging.ERROR,
+        }.get(self.log_level.lower(), logging.INFO)
 
 
 settings = Settings()
