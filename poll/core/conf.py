@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     cors_allow_methods: list[str] = ["*"]
     cors_allow_headers: list[str] = ["*"]
 
+    secret_key: str
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 1
+
     log_level: str = "INFO"
 
     @property

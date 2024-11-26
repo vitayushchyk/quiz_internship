@@ -29,6 +29,15 @@ class SignInReq(BaseModel):
     password: str
 
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    user_id: int
+
+
 class SignUpReq(BaseModel):
     first_name: str
     last_name: str
