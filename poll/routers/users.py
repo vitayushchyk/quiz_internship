@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from poll.core.deps import get_current_user, get_user_crud
 from poll.schemas.users import SignUpReq, UserDetailRes, UserUpdateRes
-from poll.services.exc.jwt_token import JWTTokenExpired, JWTTokenInvalid
+from poll.services.exc.auth import JWTTokenExpired, JWTTokenInvalid
 from poll.services.exc.user import UserAlreadyExist, UserNotFound
 from poll.services.users_serv import UserCRUD
 

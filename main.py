@@ -13,7 +13,7 @@ from poll.routers.users import (
     user_already_exists_handler,
     user_not_found_handler,
 )
-from poll.services.exc.jwt_token import JWTTokenExpired, JWTTokenInvalid
+from poll.services.exc.auth import JWTTokenExpired, JWTTokenInvalid
 from poll.services.exc.user import UserAlreadyExist, UserNotAuthenticated, UserNotFound
 
 logging.basicConfig()
