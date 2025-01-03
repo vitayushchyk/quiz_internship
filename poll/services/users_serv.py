@@ -1,6 +1,4 @@
 import jwt
-from fastapi import APIRouter
-from fastapi.security import OAuth2PasswordBearer
 
 from poll.db.model_users import UniqueViolation, User, UserRepository
 from poll.schemas.users import SignUpReq, TokenData, UserUpdateRes
@@ -8,9 +6,6 @@ from poll.services.auth_serv import decode_token
 from poll.services.exc.auth import JWTTokenInvalid
 from poll.services.exc.user import UserAlreadyExist, UserNotAuthenticated, UserNotFound
 from poll.services.password_hasher import PasswordHasher
-
-router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/")
 
 
 class UserCRUD:

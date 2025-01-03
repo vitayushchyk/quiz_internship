@@ -1,7 +1,12 @@
 import re
 from typing import List
 
+from fastapi import Form
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr, field_validator
+from typing_extensions import Annotated, Doc
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/")
 
 
 def validate_name(name: str) -> str:
@@ -67,3 +72,39 @@ class UserDetailRes(BaseModel):
     first_name: str
     last_name: str
     email: str
+
+
+class Auth(OAuth2PasswordRequestForm):
+
+    def __init__(
+        self,
+        *,
+        username: Annotated[
+            str,
+            Form(),
+            Doc(
+                """
+            `username` string. The OAuth2 spec requires the exact field name
+            `username`.
+            """
+            ),
+        ],
+        password: Annotated[
+            str,
+            Form(),
+            Doc(
+                """
+            `password` string. The OAuth2 spec requires the exact field name
+            `password".
+            """
+            ),
+        ]
+    ):
+        super().__init__(
+            grant_type=None,
+            username=username,
+            password=password,
+            scope="",
+            client_id=None,
+            client_secret=None,
+        )

@@ -5,8 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from poll.db.connection import get_async_session
 from poll.db.model_users import User, UserRepository
+from poll.schemas.users import oauth2_scheme
 from poll.services.password_hasher import PasswordHasher
-from poll.services.users_serv import UserCRUD, oauth2_scheme
+from poll.services.users_serv import UserCRUD
 
 
 async def get_password_hasher():

@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from poll.core.conf import settings
 from poll.core.deps import get_user_crud
-from poll.schemas.users import SignInReq, Token
+from poll.schemas.users import Auth, Token
 from poll.services.auth_serv import create_access_token
 from poll.services.exc.user import UserNotAuthenticated
 from poll.services.users_serv import UserCRUD
@@ -15,8 +15,10 @@ router_auth = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router_auth.post("/login/", status_code=status.HTTP_200_OK)
-async def login(login_data: SignInReq, user_service: UserCRUD = Depends(get_user_crud)):
-    user = await user_service.authenticate_user(login_data.email, login_data.password)
+async def login(
+    form_data: Auth = Depends(), user_service: UserCRUD = Depends(get_user_crud)
+):
+    user = await user_service.authenticate_user(form_data.username, form_data.password)
     if not user:
         raise UserNotAuthenticated
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
