@@ -6,3 +6,10 @@ class UserNotFound(Exception):
 class UserAlreadyExist(Exception):
     def __init__(self, user_email: str):
         self.detail = f"User with {user_email} already exist."
+
+
+class UserNotAuthenticated(Exception):
+    def __init__(
+        self,
+    ):
+        self.detail = "Incorrect email or password"

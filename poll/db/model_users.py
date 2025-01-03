@@ -59,6 +59,11 @@ class UserRepository:
         query = select(User).filter(User.id == user_id)
         return (await self.session.execute(query)).scalar()
 
+    async def get_user_by_email(self, email: str) -> User | None:
+        logger.info("Fetching user by email: %s", email)
+        query = select(User).filter(User.email == email)
+        return (await self.session.execute(query)).scalar()
+
     async def create_user(self, user: SignUpReq) -> User:
         logger.info("Creating user: %s", user)
         model_dump = user.model_dump()

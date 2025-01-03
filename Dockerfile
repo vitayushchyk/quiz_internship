@@ -34,7 +34,7 @@ FROM base AS dev
 
 RUN  poetry install --no-root
 # Note: install by pip, because of bug of adding to poetry
-RUN pip install pydevd-pycharm
+RUN pip install pydevd-pycharm~=243.21565.199
 
 COPY . .
 
