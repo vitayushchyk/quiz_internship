@@ -13,3 +13,8 @@ class UserNotAuthenticated(Exception):
         self,
     ):
         self.detail = "Incorrect email or password"
+
+
+class UserForbidden(Exception):
+    def __init__(self):
+        self.detail = "You cannot delete this profile"

@@ -5,9 +5,10 @@ from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 
 from poll.core.deps import get_current_user, get_user_crud
+from poll.db.model_users import User
 from poll.schemas.users import SignUpReq, UserDetailRes, UserUpdateRes
 from poll.services.exc.auth import JWTTokenExpired, JWTTokenInvalid
-from poll.services.exc.user import UserAlreadyExist, UserNotFound
+from poll.services.exc.user import UserAlreadyExist, UserForbidden, UserNotFound
 from poll.services.users_serv import UserCRUD
 
 router_user = APIRouter(prefix="/user", tags=["user"])
@@ -47,14 +48,29 @@ async def update_user(
 
 
 @router_user.delete("/{user_id}/", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: int, user_service: UserCRUD = Depends(get_user_crud)):
-    await user_service.delete_user(user_id)
+async def delete_user(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    user_crud: UserCRUD = Depends(get_user_crud),
+):
+    try:
+        await user_crud.delete_user(user_id=user_id, current_user=current_user)
+    except UserForbidden as e:
+        raise UserForbidden
+    return
 
 
 async def user_not_found_handler(_: Request, exc: UserNotFound):
     return JSONResponse(
         content={"details": exc.detail},
         status_code=status.HTTP_404_NOT_FOUND,
+    )
+
+
+async def user_cannot_delete_account_handler(_: Request, exc: UserForbidden):
+    return JSONResponse(
+        content={"details": exc.detail},
+        status_code=status.HTTP_403_FORBIDDEN,
     )
 
 

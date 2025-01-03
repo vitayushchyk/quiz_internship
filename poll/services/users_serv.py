@@ -4,7 +4,12 @@ from poll.db.model_users import UniqueViolation, User, UserRepository
 from poll.schemas.users import SignUpReq, TokenData, UserUpdateRes
 from poll.services.auth_serv import decode_token
 from poll.services.exc.auth import JWTTokenInvalid
-from poll.services.exc.user import UserAlreadyExist, UserNotAuthenticated, UserNotFound
+from poll.services.exc.user import (
+    UserAlreadyExist,
+    UserForbidden,
+    UserNotAuthenticated,
+    UserNotFound,
+)
 from poll.services.password_hasher import PasswordHasher
 
 
@@ -40,7 +45,9 @@ class UserCRUD:
             raise UserNotFound(user_id)
         return await self.user_repository.update_user(user, user_update)
 
-    async def delete_user(self, user_id: int):
+    async def delete_user(self, user_id: int, current_user: User):
+        if current_user.id != user_id:
+            raise UserForbidden()
         if not await self.user_repository.get_user_by_id(user_id):
             raise UserNotFound(user_id)
         await self.user_repository.delete_user(user_id)
