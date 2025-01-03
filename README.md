@@ -40,6 +40,7 @@ Firstly, you need to have [Docker](https://docs.docker.com/get-docker/) installe
       make migrate
 
 ## Run test:
+
 - Run test
 
       make run_test

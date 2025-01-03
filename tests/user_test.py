@@ -18,6 +18,21 @@ def test_create_user(client):
     }
 
 
+def test_login(client):
+    response = client.post(
+        "/auth/login/",
+        json={
+            "email": "tests@example.com",
+            "password": "sString123",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data.get("access_token") is not None
+    assert data.get("token_type") == "bearer"
+
+
 def test_user_get_by_id(client):
     response = client.get("/user/1")
     assert response.status_code == 200
