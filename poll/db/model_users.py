@@ -90,6 +90,7 @@ class UserRepository:
         logger.info("Deleting user: %s", user_id)
         result = await self.session.execute(select(User).filter(User.id == user_id))
         user = result.scalars().first()
-        await self.session.delete(user)
-        await self.session.commit()
+        if user:
+            await self.session.delete(user)
+            await self.session.commit()
         return user

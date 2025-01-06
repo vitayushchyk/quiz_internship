@@ -11,10 +11,16 @@ from poll.routers.users import (
     token_expired_handler,
     token_invalid_handler,
     user_already_exists_handler,
+    user_cannot_delete_account_handler,
     user_not_found_handler,
 )
 from poll.services.exc.auth import JWTTokenExpired, JWTTokenInvalid
-from poll.services.exc.user import UserAlreadyExist, UserNotAuthenticated, UserNotFound
+from poll.services.exc.user import (
+    UserAlreadyExist,
+    UserForbidden,
+    UserNotAuthenticated,
+    UserNotFound,
+)
 
 logging.basicConfig()
 logging.getLogger().setLevel(settings.get_log_level())
@@ -37,5 +43,6 @@ app.include_router(router_auth)
 app.add_exception_handler(UserNotFound, user_not_found_handler)
 app.add_exception_handler(UserAlreadyExist, user_already_exists_handler)
 app.add_exception_handler(UserNotAuthenticated, user_not_authenticated_handler)
+app.add_exception_handler(UserForbidden, user_cannot_delete_account_handler)
 app.add_exception_handler(JWTTokenInvalid, token_invalid_handler)
 app.add_exception_handler(JWTTokenExpired, token_expired_handler)
