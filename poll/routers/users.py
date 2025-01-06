@@ -42,9 +42,12 @@ async def create_user(user: SignUpReq, user_service: UserCRUD = Depends(get_user
 async def update_user(
     user_id: int,
     user_update: UserUpdateRes,
+    current_user: User = Depends(get_current_user),
     user_service: UserCRUD = Depends(get_user_crud),
 ):
-    return await user_service.update_user(user_id, user_update)
+    return await user_service.update_user(
+        user_id=user_id, user_update=user_update, current_user=current_user
+    )
 
 
 @router_user.delete("/{user_id}/", status_code=status.HTTP_204_NO_CONTENT)
@@ -55,7 +58,7 @@ async def delete_user(
 ):
     try:
         await user_crud.delete_user(user_id=user_id, current_user=current_user)
-    except UserForbidden as e:
+    except UserForbidden:
         raise UserForbidden
     return
 

@@ -9,12 +9,10 @@ class UserAlreadyExist(Exception):
 
 
 class UserNotAuthenticated(Exception):
-    def __init__(
-        self,
-    ):
+    def __init__(self):
         self.detail = "Incorrect email or password"
 
 
 class UserForbidden(Exception):
     def __init__(self):
-        self.detail = "You cannot delete this profile"
+        self.detail = "Access to the requested resource is forbidden."
