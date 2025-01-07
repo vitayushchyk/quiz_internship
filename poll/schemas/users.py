@@ -84,9 +84,9 @@ class Auth(OAuth2PasswordRequestForm):
             Form(),
             Doc(
                 """
-                `username` string. The OAuth2 spec requires the exact field name
-                `username`.
-                """
+                    `username` string. The OAuth2 spec requires the exact field name
+                    `username`.
+                    """
             ),
         ],
         password: Annotated[
@@ -94,9 +94,9 @@ class Auth(OAuth2PasswordRequestForm):
             Form(),
             Doc(
                 """
-                `password` string. The OAuth2 spec requires the exact field name
-                `password".
-                """
+                    `password` string. The OAuth2 spec requires the exact field name
+                    `password".
+                    """
             ),
         ]
     ):
