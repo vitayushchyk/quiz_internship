@@ -1,9 +1,9 @@
 import datetime
+from enum import Enum
 from logging import getLogger
 from typing import Any, Sequence
 
 from sqlalchemy import (
-    Boolean,
     Column,
     DateTime,
     ForeignKey,
@@ -14,13 +14,21 @@ from sqlalchemy import (
     func,
     select,
 )
+from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import relationship
 
 from poll.db.connection import Base
+from poll.schemas.company_schemas import CreateCompanyReq, UpdateCompanyReq
+from poll.services.exc.company_exc import CompanyNotFoundByID, UnauthorizedCompanyAccess
 from poll.services.pagination import Pagination
 
 logger = getLogger(__name__)
+
+
+class ChangeVisibility(str, Enum):
+    HIDDEN = "hidden"
+    VISIBLE = "visible"
 
 
 class Company(Base):
@@ -29,7 +37,11 @@ class Company(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     name = Column(String, nullable=False)
     description = Column(String, nullable=False)
-    is_visible = Column(Boolean, default=True, nullable=False)
+    status = Column(
+        ENUM(ChangeVisibility, name="company_status_change"),
+        nullable=False,
+        default=ChangeVisibility.VISIBLE,
+    )
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at: datetime.date = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -54,3 +66,50 @@ class CompanyRepository:
         logger.info("Fetching company by ID: %s", company_id)
         query = select(Company).filter(Company.id == company_id)
         return (await self.session.execute(query)).scalar()
+
+    async def create_new_company(self, req_data: CreateCompanyReq) -> Company:
+        logger.info("Creating company: %s", req_data)
+        new_company = Company(
+            name=req_data.name,
+            description=req_data.description,
+            owner_id=req_data.owner_id,
+        )
+        self.session.add(new_company)
+        await self.session.commit()
+        await self.session.refresh(new_company)
+        return new_company
+
+    async def update_company(
+        self, company_id: int, user_id: int, req_data: UpdateCompanyReq
+    ) -> Company:
+        logger.info("Updating company: %s", req_data)
+
+        query = select(Company).filter(Company.id == company_id)
+        company = (await self.session.execute(query)).scalar()
+
+        if not company:
+            raise CompanyNotFoundByID(company_id)
+
+        if company.owner_id != user_id:
+            raise UnauthorizedCompanyAccess(company_id)
+
+        if req_data.name is not None:
+            company.name = req_data.name
+        if req_data.description is not None:
+            company.description = req_data.description
+
+        self.session.add(company)
+        await self.session.commit()
+        await self.session.refresh(company)
+        return company
+
+    async def delete_company(self, company_id: int, user_id: int) -> Company:
+        logger.info("Deleting company: %s", company_id)
+        query = select(Company).filter(Company.id == company_id)
+        company = (await self.session.execute(query)).scalar()
+        if not company:
+            raise CompanyNotFoundByID(company_id)
+        if company.owner_id != user_id:
+            raise UnauthorizedCompanyAccess(company_id)
+        await self.session.delete(company)
+        await self.session.commit()

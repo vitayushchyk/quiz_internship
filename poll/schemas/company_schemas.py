@@ -9,7 +9,19 @@ class CompanySchema(BaseModel):
 
 
 class CompanyDetailRes(BaseModel):
-    id: int | None = None
+    id: int
     name: str
     description: str
     owner_id: int
+
+
+class CreateCompanyReq(BaseModel):
+    name: str
+    description: str
+    status: str
+    owner_id: int
+
+
+class UpdateCompanyReq(BaseModel):
+    name: str
+    description: str

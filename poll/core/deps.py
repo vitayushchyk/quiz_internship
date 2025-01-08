@@ -35,6 +35,12 @@ async def get_current_user(
     yield await user_service.get_current_user(jwt_token)
 
 
+async def get_current_user_id(
+    current_user: User = Depends(get_current_user),
+) -> int:
+    return current_user.id
+
+
 async def get_company_repository(
     session: AsyncSession = Depends(get_async_session),
 ) -> AsyncGenerator[CompanyRepository, None]:

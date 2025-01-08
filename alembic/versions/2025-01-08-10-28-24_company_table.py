@@ -1,20 +1,21 @@
 """company_table
 
-Revision ID: 39c16f7a59cc
-Revises: e20567938e5b
-Create Date: 2025-01-06 16:11:04.556871
+Revision ID: 4d50f419607b
+Revises: 071021997e60
+Create Date: 2025-01-08 10:28:24.470651
 
 """
 
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "39c16f7a59cc"
-down_revision: Union[str, None] = "e20567938e5b"
+revision: str = "4d50f419607b"
+down_revision: Union[str, None] = "071021997e60"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -25,7 +26,11 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("description", sa.String(), nullable=False),
-        sa.Column("is_visible", sa.Boolean(), nullable=False),
+        sa.Column(
+            "status",
+            postgresql.ENUM("HIDDEN", "VISIBLE", name="company_status_change"),
+            nullable=False,
+        ),
         sa.Column("owner_id", sa.Integer(), nullable=False),
         sa.Column(
             "created_at",

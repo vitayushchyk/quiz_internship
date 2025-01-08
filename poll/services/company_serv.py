@@ -1,5 +1,6 @@
-from poll.db.model_company import CompanyRepository
-from poll.services.exc.company_exc import CompanyNotFound
+from poll.db.model_company import Company, CompanyRepository
+from poll.schemas.company_schemas import CreateCompanyReq, UpdateCompanyReq
+from poll.services.exc.company_exc import CompanyNotFoundByID
 
 
 class CompanyCRUD:
@@ -11,5 +12,16 @@ class CompanyCRUD:
 
     async def get_company_by_id(self, company_id: int):
         if not await self.company_repo.get_company_by_id(company_id):
-            raise CompanyNotFound(company_id)
+            raise CompanyNotFoundByID(company_id)
         return await self.company_repo.get_company_by_id(company_id)
+
+    async def create_new_company(self, req_data: CreateCompanyReq) -> Company:
+        return await self.company_repo.create_new_company(req_data)
+
+    async def update_company(
+        self, company_id: int, user_id: int, req_data: UpdateCompanyReq
+    ) -> Company:
+        return await self.company_repo.update_company(company_id, user_id, req_data)
+
+    async def delete_company(self, company_id: int, user_id: int) -> Company:
+        return await self.company_repo.delete_company(company_id, user_id)
