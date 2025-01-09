@@ -19,8 +19,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import relationship
 
 from poll.db.connection import Base
-from poll.schemas.company_schemas import CreateCompanyReq, UpdateCompanyReq
-from poll.services.exc.company_exc import CompanyNotFoundByID, UnauthorizedCompanyAccess
+from poll.schemas.company_schemas import (
+    CompanyVisibilityReq,
+    CreateCompanyReq,
+    UpdateCompanyReq,
+)
+from poll.services.exc.company_exc import (
+    CompanyAlreadyExist,
+    CompanyNotFoundByID,
+    CompanyStatusNotValid,
+    UnauthorizedCompanyAccess,
+)
 from poll.services.pagination import Pagination
 
 logger = getLogger(__name__)
@@ -35,7 +44,7 @@ class Company(Base):
     __tablename__ = "companies"
 
     id = Column(Integer, primary_key=True, nullable=False)
-    name = Column(String, nullable=False)
+    name = Column(String, unique=True, nullable=False)
     description = Column(String, nullable=False)
     status = Column(
         ENUM(ChangeVisibility, name="company_status_change"),
@@ -69,6 +78,12 @@ class CompanyRepository:
 
     async def create_new_company(self, req_data: CreateCompanyReq) -> Company:
         logger.info("Creating company: %s", req_data)
+        existing_company = await self.session.execute(
+            select(Company).where(Company.name == req_data.name)
+        )
+        existing_company = existing_company.scalars().first()
+        if existing_company:
+            raise CompanyAlreadyExist(company_name=existing_company.name)
         new_company = Company(
             name=req_data.name,
             description=req_data.description,
@@ -103,7 +118,7 @@ class CompanyRepository:
         await self.session.refresh(company)
         return company
 
-    async def delete_company(self, company_id: int, user_id: int) -> Company:
+    async def delete_company(self, company_id: int, user_id: int) -> None:
         logger.info("Deleting company: %s", company_id)
         query = select(Company).filter(Company.id == company_id)
         company = (await self.session.execute(query)).scalar()
@@ -113,3 +128,30 @@ class CompanyRepository:
             raise UnauthorizedCompanyAccess(company_id)
         await self.session.delete(company)
         await self.session.commit()
+
+    async def change_company_visibility(
+        self, company_id: int, user_id: int, status: CompanyVisibilityReq
+    ) -> Company:
+        logger.info("Changing company visibility: %s", status)
+
+        query = select(Company).filter(Company.id == company_id)
+        company = (await self.session.execute(query)).scalar()
+
+        if not company:
+            raise CompanyNotFoundByID(company_id)
+
+        if company.owner_id != user_id:
+            raise UnauthorizedCompanyAccess(company_id)
+
+        if status.status not in [ChangeVisibility.HIDDEN, ChangeVisibility.VISIBLE]:
+            valid_statuses = [status for status in ChangeVisibility]
+            raise CompanyStatusNotValid(
+                company_status=status.status, valid_statuses=valid_statuses
+            )
+
+        company.status = status.status
+        self.session.add(company)
+        await self.session.commit()
+        await self.session.refresh(company)
+
+        return company

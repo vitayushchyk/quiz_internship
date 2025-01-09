@@ -8,11 +8,17 @@ from fastapi.responses import JSONResponse
 from poll.core.deps import get_company_repository, get_current_user_id
 from poll.schemas.company_schemas import (
     CompanyDetailRes,
+    CompanyVisibilityReq,
     CreateCompanyReq,
     UpdateCompanyReq,
 )
 from poll.services.company_serv import CompanyCRUD
-from poll.services.exc.company_exc import CompanyNotFoundByID, UnauthorizedCompanyAccess
+from poll.services.exc.company_exc import (
+    CompanyAlreadyExist,
+    CompanyNotFoundByID,
+    CompanyStatusNotValid,
+    UnauthorizedCompanyAccess,
+)
 
 company_router = APIRouter(prefix="/company", tags=["company"])
 
@@ -25,7 +31,7 @@ company_router = APIRouter(prefix="/company", tags=["company"])
 async def companies_list(
     page: int = 1, company_service: CompanyCRUD = Depends(get_company_repository)
 ):
-    return await company_service.get_all_companies(page=page)
+    return await company_service.get_all_companies(page=page, page_size=10)
 
 
 @company_router.get(
@@ -90,6 +96,25 @@ async def delete_company(
     return
 
 
+@company_router.post(
+    "/change/visibility",
+    summary="Change company visibility",
+    response_model=CompanyDetailRes,
+)
+async def change_company_visibility(
+    company_id: int,
+    company_status: CompanyVisibilityReq,
+    user_id: int = Depends(get_current_user_id),
+    company_service: CompanyCRUD = Depends(get_company_repository),
+):
+    updated_company = await company_service.change_company_visibility(
+        company_id=company_id,
+        user_id=user_id,
+        status=company_status,
+    )
+    return updated_company
+
+
 async def company_not_found_by_id(_: Request, exc: CompanyNotFoundByID):
     return JSONResponse(
         content={"details": exc.detail},
@@ -101,4 +126,18 @@ async def company_permission_handler(_: Request, exc: UnauthorizedCompanyAccess)
     return JSONResponse(
         content={"details": exc.detail},
         status_code=status.HTTP_403_FORBIDDEN,
+    )
+
+
+async def company_already_exists_handler(_: Request, exc: CompanyAlreadyExist):
+    return JSONResponse(
+        content={"details": exc.detail},
+        status_code=status.HTTP_409_CONFLICT,
+    )
+
+
+async def company_status_not_valid_handler(_: Request, exc: CompanyStatusNotValid):
+    return JSONResponse(
+        content={"details": exc.detail},
+        status_code=status.HTTP_400_BAD_REQUEST,
     )

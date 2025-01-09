@@ -1,5 +1,9 @@
 from poll.db.model_company import Company, CompanyRepository
-from poll.schemas.company_schemas import CreateCompanyReq, UpdateCompanyReq
+from poll.schemas.company_schemas import (
+    CompanyVisibilityReq,
+    CreateCompanyReq,
+    UpdateCompanyReq,
+)
 from poll.services.exc.company_exc import CompanyNotFoundByID
 
 
@@ -23,5 +27,12 @@ class CompanyCRUD:
     ) -> Company:
         return await self.company_repo.update_company(company_id, user_id, req_data)
 
-    async def delete_company(self, company_id: int, user_id: int) -> Company:
+    async def delete_company(self, company_id: int, user_id: int) -> None:
         return await self.company_repo.delete_company(company_id, user_id)
+
+    async def change_company_visibility(
+        self, company_id: int, user_id: int, status: CompanyVisibilityReq
+    ) -> Company:
+        return await self.company_repo.change_company_visibility(
+            company_id, user_id, status
+        )

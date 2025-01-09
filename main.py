@@ -6,9 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from poll.core.conf import settings
 from poll.routers.auth import router_auth, user_not_authenticated_handler
 from poll.routers.company_routers import (
+    company_already_exists_handler,
     company_not_found_by_id,
     company_permission_handler,
     company_router,
+    company_status_not_valid_handler,
 )
 from poll.routers.health_check import health_check_router
 from poll.routers.users import (
@@ -20,7 +22,12 @@ from poll.routers.users import (
     user_not_found_handler,
 )
 from poll.services.exc.auth import JWTTokenExpired, JWTTokenInvalid
-from poll.services.exc.company_exc import CompanyNotFoundByID, UnauthorizedCompanyAccess
+from poll.services.exc.company_exc import (
+    CompanyAlreadyExist,
+    CompanyNotFoundByID,
+    CompanyStatusNotValid,
+    UnauthorizedCompanyAccess,
+)
 from poll.services.exc.user import (
     UserAlreadyExist,
     UserForbidden,
@@ -55,3 +62,5 @@ app.add_exception_handler(JWTTokenInvalid, token_invalid_handler)
 app.add_exception_handler(JWTTokenExpired, token_expired_handler)
 app.add_exception_handler(CompanyNotFoundByID, company_not_found_by_id)
 app.add_exception_handler(UnauthorizedCompanyAccess, company_permission_handler)
+app.add_exception_handler(CompanyAlreadyExist, company_already_exists_handler)
+app.add_exception_handler(CompanyStatusNotValid, company_status_not_valid_handler)
