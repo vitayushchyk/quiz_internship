@@ -4,6 +4,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from poll.db.connection import get_async_session
+from poll.db.model_company import CompanyRepository
 from poll.db.model_users import User, UserRepository
 from poll.schemas.users import oauth2_scheme
 from poll.services.password_hasher import PasswordHasher
@@ -32,3 +33,15 @@ async def get_current_user(
     user_service: UserCRUD = Depends(get_user_crud),
 ) -> AsyncGenerator[User | None, None]:
     yield await user_service.get_current_user(jwt_token)
+
+
+async def get_current_user_id(
+    current_user: User = Depends(get_current_user),
+) -> int:
+    return current_user.id
+
+
+async def get_company_repository(
+    session: AsyncSession = Depends(get_async_session),
+) -> AsyncGenerator[CompanyRepository, None]:
+    yield CompanyRepository(session)

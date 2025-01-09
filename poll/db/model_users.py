@@ -16,6 +16,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import relationship
 
 from poll.db.connection import Base
 from poll.schemas.users import SignUpReq, UserUpdateRes
@@ -36,6 +37,9 @@ class User(Base):
     is_superuser: bool = Column(Boolean, default=False, nullable=False)
     created_at: datetime.date = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    companies = relationship(
+        "Company", back_populates="owner", cascade="all, delete-orphan"
     )
 
 
