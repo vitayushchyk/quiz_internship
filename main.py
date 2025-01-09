@@ -13,6 +13,12 @@ from poll.routers.company_routers import (
     company_status_not_valid_handler,
 )
 from poll.routers.health_check import health_check_router
+from poll.routers.membership_routers import (
+    membership_router,
+    user_already_invite_handler,
+    user_already_member_handler,
+    user_invite_to_company_handler,
+)
 from poll.routers.users import (
     router_user,
     token_expired_handler,
@@ -27,6 +33,11 @@ from poll.services.exc.company_exc import (
     CompanyNotFoundByID,
     CompanyStatusNotValid,
     UnauthorizedCompanyAccess,
+)
+from poll.services.exc.membership_exc import (
+    UserAlreadyInvited,
+    UserAlreadyMember,
+    UserInviteSuccess,
 )
 from poll.services.exc.user import (
     UserAlreadyExist,
@@ -53,7 +64,7 @@ app.include_router(router_user)
 
 app.include_router(router_auth)
 app.include_router(company_router)
-
+app.include_router(membership_router)
 app.add_exception_handler(UserNotFound, user_not_found_handler)
 app.add_exception_handler(UserAlreadyExist, user_already_exists_handler)
 app.add_exception_handler(UserNotAuthenticated, user_not_authenticated_handler)
@@ -64,3 +75,6 @@ app.add_exception_handler(CompanyNotFoundByID, company_not_found_by_id)
 app.add_exception_handler(UnauthorizedCompanyAccess, company_permission_handler)
 app.add_exception_handler(CompanyAlreadyExist, company_already_exists_handler)
 app.add_exception_handler(CompanyStatusNotValid, company_status_not_valid_handler)
+app.add_exception_handler(UserInviteSuccess, user_invite_to_company_handler)
+app.add_exception_handler(UserAlreadyMember, user_already_member_handler)
+app.add_exception_handler(UserAlreadyInvited, user_already_invite_handler)
