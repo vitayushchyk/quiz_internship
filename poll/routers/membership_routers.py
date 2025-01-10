@@ -3,7 +3,7 @@ from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 from starlette import status
 
-from poll.core.deps import get_membership_repository
+from poll.core.deps import get_current_user_id, get_membership_repository
 from poll.services.exc.membership_exc import (
     UserAlreadyInvited,
     UserAlreadyMember,
@@ -25,6 +25,15 @@ async def invite_user_to_company(
         return UserInviteSuccess(company_id=company_id, user_id=user_id)
     except UserAlreadyMember:
         raise UserAlreadyMember(user_id=user_id, company_id=company_id)
+
+
+@membership_router.get("/my_invitations", summary="View active invitations")
+async def view_active_invitations(
+    user_id: int = Depends(get_current_user_id),
+    membership_service: MembershipCRUD = Depends(get_membership_repository),
+):
+    invitations = await membership_service.get_user_invitations(user_id)
+    return {"invitations": invitations}
 
 
 async def user_invite_to_company_handler(_: Request, exc: UserInviteSuccess):

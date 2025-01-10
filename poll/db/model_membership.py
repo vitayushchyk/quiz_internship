@@ -63,3 +63,10 @@ class MembershipRepository:
         await self.session.commit()
         await self.session.refresh(new_membership)
         return new_membership
+
+    async def get_user_invitations(self, user_id: int):
+        query = select(CompanyMembership).filter_by(
+            user_id=user_id, membership_status=MembershipStatus.PENDING_INVITATION
+        )
+        result = (await self.session.execute(query)).scalars().all()
+        return result
