@@ -1,15 +1,24 @@
-class UserInviteSuccess(Exception):
-    def __init__(self, company_id: int, user_id: int):
-        self.detail = f"User {user_id} has been successfully invited to the company with ID {company_id}."
+class MembershipException(Exception):
+    def __init__(self, detail: str):
+        self.detail = detail
 
 
-class UserAlreadyMember(Exception):
+class UserInviteSuccess(MembershipException):
     def __init__(self, company_id: int, user_id: int):
-        self.detail = (
+        super().__init__(
+            f"User {user_id} has been successfully invited to the company with ID {company_id}."
+        )
+
+
+class UserAlreadyMember(MembershipException):
+    def __init__(self, company_id: int, user_id: int):
+        super().__init__(
             f"User {user_id} is already a member of the company with ID {company_id}."
         )
 
 
-class UserAlreadyInvited(Exception):
+class UserAlreadyInvited(MembershipException):
     def __init__(self, company_id: int, user_id: int):
-        self.detail = f"User {user_id} is already invited to the company with ID {company_id}, and is waiting for confirmation."
+        super().__init__(
+            f"User {user_id} is already invited to the company with ID {company_id}."
+        )

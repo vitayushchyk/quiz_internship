@@ -8,6 +8,7 @@ from poll.db.model_company import CompanyRepository
 from poll.db.model_membership import MembershipRepository
 from poll.db.model_users import User, UserRepository
 from poll.schemas.users import oauth2_scheme
+from poll.services.membership_serv import MembershipCRUD
 from poll.services.password_hasher import PasswordHasher
 from poll.services.users_serv import UserCRUD
 
@@ -48,7 +49,13 @@ async def get_company_repository(
     yield CompanyRepository(session)
 
 
-async def get_membership_repository(
+def get_membership_repository(
     session: AsyncSession = Depends(get_async_session),
-) -> AsyncGenerator[MembershipRepository, None]:
-    yield MembershipRepository(session)
+) -> MembershipRepository:
+    return MembershipRepository(session)
+
+
+def get_membership_service(
+    repo: MembershipRepository = Depends(get_membership_repository),
+) -> MembershipCRUD:
+    return MembershipCRUD(repo)

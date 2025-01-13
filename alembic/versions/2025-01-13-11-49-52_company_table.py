@@ -1,8 +1,8 @@
 """company_table
 
-Revision ID: 4d50f419607b
-Revises: 071021997e60
-Create Date: 2025-01-08 10:28:24.470651
+Revision ID: 449e7a485adf
+Revises: f2d729c58c1b
+Create Date: 2025-01-13 11:49:52.717860
 
 """
 
@@ -14,18 +14,19 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "4d50f419607b"
-down_revision: Union[str, None] = "071021997e60"
+revision: str = "449e7a485adf"
+down_revision: Union[str, None] = "f2d729c58c1b"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+
     op.create_table(
         "companies",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("description", sa.String(), nullable=False),
+        sa.Column("name", sa.String(length=100), nullable=False),
+        sa.Column("description", sa.String(length=256), nullable=False),
         sa.Column(
             "status",
             postgresql.ENUM("HIDDEN", "VISIBLE", name="company_status_change"),
@@ -43,8 +44,10 @@ def upgrade() -> None:
             ["users.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("name"),
     )
 
 
 def downgrade() -> None:
+
     op.drop_table("companies")
