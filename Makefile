@@ -55,4 +55,3 @@ build: ## Rebuild application
 
 run_test: ## Run test
 	docker compose -f docker-compose.test.yml up  --force-recreate --renew-anon-volumes api-test || exit 1
-
