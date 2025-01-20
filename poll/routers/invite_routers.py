@@ -1,0 +1,101 @@
+from fastapi import APIRouter, Depends
+from requests import Request
+from starlette import status
+from starlette.responses import JSONResponse
+
+from poll.core.deps import get_current_user_id, get_invite_crud
+from poll.schemas.invite_schemas import InviteCreateReq, InviteRes
+from poll.services.exc.company_exc import CompanyNotFoundByID
+from poll.services.exc.invite_exc import (
+    InvitationAlreadyExistError,
+    InvitationNotExistsError,
+    PermissionDeniedError,
+)
+from poll.services.exc.user import UserNotFound
+from poll.services.invite_serv import InviteCRUD
+
+invite_router = APIRouter(prefix="/invite", tags=["Invite"])
+
+
+@invite_router.post(
+    "/",
+    response_model=InviteRes,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create Invite",
+)
+async def create_invite_to_user(
+    request: InviteCreateReq,
+    current_user_id: int = Depends(get_current_user_id),
+    invite_service: InviteCRUD = Depends(get_invite_crud),
+):
+    try:
+
+        invite = await invite_service.owner_send_invite(
+            company_id=request.company_id,
+            user_id=request.user_id,
+            current_user_id=current_user_id,
+        )
+
+        response = InviteRes(
+            id=invite.id,
+            company_id=invite.company_id,
+            user_id=invite.user_id,
+            invite_status=invite.invite_status.value,
+        )
+        return response
+    except PermissionDeniedError:
+        raise PermissionDeniedError
+
+
+@invite_router.delete(
+    "/{company_id}/{user_id}/",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Cancel Invite",
+)
+async def cancel_invite_to_user(
+    company_id: int,
+    user_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    invite_service: InviteCRUD = Depends(get_invite_crud),
+):
+    result = await invite_service.owner_cancel_invite(
+        company_id=company_id,
+        user_id=user_id,
+        current_user_id=current_user_id,
+    )
+    return result
+
+
+async def company_not_found_by_id_handler(_: Request, exc: CompanyNotFoundByID):
+    return JSONResponse(
+        content={"details": exc.detail},
+        status_code=status.HTTP_404_NOT_FOUND,
+    )
+
+
+async def user_not_found(_: Request, exc: UserNotFound):
+    return JSONResponse(
+        content={"details": exc.detail},
+        status_code=status.HTTP_404_NOT_FOUND,
+    )
+
+
+async def invite_already_exists_handler(_: Request, exc: InvitationAlreadyExistError):
+    return JSONResponse(
+        content={"details": exc.detail},
+        status_code=status.HTTP_409_CONFLICT,
+    )
+
+
+async def permission_denied_handler(_: Request, exc: PermissionDeniedError):
+    return JSONResponse(
+        content={"details": exc.detail},
+        status_code=status.HTTP_403_FORBIDDEN,
+    )
+
+
+async def invite_not_exists_handler(_: Request, exc: InvitationNotExistsError):
+    return JSONResponse(
+        content={"details": exc.detail},
+        status_code=status.HTTP_404_NOT_FOUND,
+    )

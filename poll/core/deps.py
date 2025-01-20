@@ -5,10 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from poll.db.connection import get_async_session
 from poll.db.model_company import CompanyRepository
-from poll.db.model_membership import MembershipRepository
+from poll.db.model_invite import InviteRepository
 from poll.db.model_users import User, UserRepository
 from poll.schemas.users import oauth2_scheme
-from poll.services.membership_serv import MembershipCRUD
+from poll.services.invite_serv import InviteCRUD
 from poll.services.password_hasher import PasswordHasher
 from poll.services.users_serv import UserCRUD
 
@@ -49,13 +49,15 @@ async def get_company_repository(
     yield CompanyRepository(session)
 
 
-def get_membership_repository(
+async def get_invite_repository(
     session: AsyncSession = Depends(get_async_session),
-) -> MembershipRepository:
-    return MembershipRepository(session)
+) -> AsyncGenerator[InviteRepository, None]:
+    yield InviteRepository(session)
 
 
-def get_membership_service(
-    repo: MembershipRepository = Depends(get_membership_repository),
-) -> MembershipCRUD:
-    return MembershipCRUD(repo)
+async def get_invite_crud(
+    invite_repository: InviteRepository = Depends(get_invite_repository),
+    user_repository: UserRepository = Depends(get_user_repository),
+    company_repository: CompanyRepository = Depends(get_company_repository),
+) -> AsyncGenerator[InviteCRUD, None]:
+    yield InviteCRUD(invite_repository, user_repository, company_repository)

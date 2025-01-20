@@ -155,3 +155,11 @@ class CompanyRepository:
         await self.session.refresh(company)
 
         return company
+
+    async def check_owner(self, company_id: int, user_id: int) -> bool:
+        logger.info("Checking owner: %s", company_id)
+        query = select(Company).filter(Company.id == company_id)
+        company = (await self.session.execute(query)).scalar()
+        if not company:
+            raise CompanyNotFoundByID(company_id)
+        return company.owner_id == user_id

@@ -1,8 +1,8 @@
-"""membership_table
+"""create_invite_table
 
-Revision ID: 564dfda4f527
-Revises: 449e7a485adf
-Create Date: 2025-01-13 11:50:57.149200
+Revision ID: 7a3c9436da2c
+Revises: f498b0004793
+Create Date: 2025-01-17 13:10:10.152885
 
 """
 
@@ -14,8 +14,8 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "564dfda4f527"
-down_revision: Union[str, None] = "449e7a485adf"
+revision: str = "7a3c9436da2c"
+down_revision: Union[str, None] = "f498b0004793"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -23,7 +23,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
 
     op.create_table(
-        "company_membership",
+        "invites",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("company_id", sa.Integer(), nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=False),
@@ -36,12 +36,7 @@ def upgrade() -> None:
         sa.Column(
             "membership_status",
             postgresql.ENUM(
-                "INVITATION_PENDING",
-                "REQUEST_PENDING",
-                "ACTIVE_MEMBER",
-                "INVITATION_REJECTED",
-                "REQUEST_REJECTED",
-                name="membership_status",
+                "ACCEPTED", "REJECTED", "PENDING", name="membership_status"
             ),
             nullable=False,
         ),
@@ -59,4 +54,4 @@ def upgrade() -> None:
 
 def downgrade() -> None:
 
-    op.drop_table("company_membership")
+    op.drop_table("invites")
