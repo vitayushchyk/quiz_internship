@@ -1,10 +1,12 @@
 from poll.db.model_company import CompanyRepository, logger
-from poll.db.model_invite import InviteRepository
+from poll.db.model_invite import InviteRepository, InviteStatus
 from poll.db.model_users import UserRepository
 from poll.services.exc.company_exc import CompanyNotFoundByID
 from poll.services.exc.invite_exc import (
+    InvalidInviteAlreadyRejectedError,
     InvitationAlreadyExistError,
     InvitationNotExistsError,
+    InviteAlreadyAcceptedError,
     PermissionDeniedError,
 )
 from poll.services.exc.user import UserNotFound
@@ -61,7 +63,6 @@ class InviteCRUD:
         logger.info(f"Verifying ownership for company_id={company_id}...")
         is_owner = await self.company_repo.check_owner(company_id, current_user_id)
         if not is_owner:
-
             raise PermissionDeniedError
 
         logger.info(
@@ -78,3 +79,53 @@ class InviteCRUD:
         )
         await self.invite_repo.delete_invite(company_id=company_id, user_id=user_id)
         return
+
+    async def user_accept_invite(self, invite_id: int, current_user_id: int):
+        logger.info(
+            f"User {current_user_id} attempting to accept invite {invite_id}..."
+        )
+
+        logger.info(f"Checking if invite exists for user_id={current_user_id}...")
+
+        invite = await self.invite_repo.get_invite_by_id(invite_id=invite_id)
+
+        if not invite:
+            raise InvitationNotExistsError
+
+        if invite.user_id != current_user_id:
+            raise PermissionDeniedError
+
+        if invite.invite_status == InviteStatus.ACCEPTED:
+            raise InviteAlreadyAcceptedError(invite_id)
+
+        invite = await self.invite_repo.accept_invite(invite_id=invite_id)
+        logger.info(
+            f"Invite {invite_id} accepted successfully by user {current_user_id}."
+        )
+        return invite
+
+    async def user_reject_invite(self, invite_id: int, current_user_id: int):
+        logger.info(
+            f"User {current_user_id} attempting to reject invite {invite_id}..."
+        )
+
+        invite = await self.invite_repo.get_invite_by_id(invite_id=invite_id)
+
+        if not invite:
+            raise InvitationNotExistsError
+
+        if invite.user_id != current_user_id:
+            raise PermissionDeniedError
+
+        if invite.invite_status == InviteStatus.REJECTED:
+            raise InvalidInviteAlreadyRejectedError(invite_id)
+
+        invite = await self.invite_repo.reject_invite(invite_id=invite_id)
+        logger.info(
+            f"Invite {invite_id} accepted successfully by user {current_user_id}."
+        )
+        return invite
+
+    async def show_user_invites(self, current_user_id: int):
+        logger.info(f"Fetching invites for user_id {current_user_id}...")
+        return await self.invite_repo.get_user_invites(user_id=current_user_id)

@@ -3,11 +3,9 @@ class InviteException(Exception):
         self.detail = detail
 
 
-class UserAlreadyInvited(InviteException):
-    def __init__(self, company_id: int, user_id: int):
-        super().__init__(
-            f"User {user_id} is already invited to the company with ID {company_id}."
-        )
+class InvitationAcceptedSuccessfully(InviteException):
+    def __init__(self, status: str):
+        super().__init__(f"Invite accepted successfully invite_status {status}.")
 
 
 class PermissionDeniedError(InviteException):
@@ -21,7 +19,25 @@ class InvitationAlreadyExistError(InviteException):
 
 
 class InvitationNotExistsError(InviteException):
-    def __init__(
-        self,
-    ):
+    def __init__(self):
         super().__init__(f"Invite not found")
+
+
+class InvalidInviteSearchParams(InviteException):
+    def __init__(self):
+        super().__init__("You must provide either invite_id or company_id and user_id.")
+
+
+class InviteAlreadyAcceptedError(InviteException):
+    def __init__(self, invite_id: int):
+        super().__init__(f"Invite with ID {invite_id} has already been accepted.")
+
+
+class InviteRejectedSuccessfully(InviteException):
+    def __init__(self, status: str):
+        super().__init__(f"Invite with ID {status} has been rejected.")
+
+
+class InvalidInviteAlreadyRejectedError(InviteException):
+    def __init__(self, invite_id: int):
+        super().__init__(f"Invite with ID {invite_id} has already been rejected.")

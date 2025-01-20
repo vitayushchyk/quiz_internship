@@ -15,8 +15,12 @@ from poll.routers.company_routers import (
 from poll.routers.health_check import health_check_router
 from poll.routers.invite_routers import (
     company_not_found_by_id_handler,
+    invite_accepted_successfully_handler,
+    invite_already_accepted_handler,
     invite_already_exists_handler,
+    invite_already_rejected_handler,
     invite_not_exists_handler,
+    invite_rejected_successfully_handler,
     invite_router,
     permission_denied_handler,
     user_not_found,
@@ -37,8 +41,12 @@ from poll.services.exc.company_exc import (
     UnauthorizedCompanyAccess,
 )
 from poll.services.exc.invite_exc import (
+    InvalidInviteAlreadyRejectedError,
+    InvitationAcceptedSuccessfully,
     InvitationAlreadyExistError,
     InvitationNotExistsError,
+    InviteAlreadyAcceptedError,
+    InviteRejectedSuccessfully,
     PermissionDeniedError,
 )
 from poll.services.exc.user import (
@@ -84,3 +92,13 @@ app.add_exception_handler(UserNotFound, user_not_found)
 app.add_exception_handler(InvitationAlreadyExistError, invite_already_exists_handler)
 app.add_exception_handler(PermissionDeniedError, permission_denied_handler)
 app.add_exception_handler(InvitationNotExistsError, invite_not_exists_handler)
+app.add_exception_handler(InviteAlreadyAcceptedError, invite_already_accepted_handler)
+app.add_exception_handler(
+    InvalidInviteAlreadyRejectedError, invite_already_rejected_handler
+)
+app.add_exception_handler(
+    InvitationAcceptedSuccessfully, invite_accepted_successfully_handler
+)
+app.add_exception_handler(
+    InviteRejectedSuccessfully, invite_rejected_successfully_handler
+)
