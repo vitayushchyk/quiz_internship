@@ -15,7 +15,7 @@ services:
     volumes:
       - ".:/app"
     env_file:
-      - .env
+      - .env.app
     depends_on:
       db:
         condition: service_healthy
@@ -32,7 +32,7 @@ services:
     ports:
       - "${DB_PORT}:${DB_PORT}"
     env_file:
-      - .env
+      - .env.app
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1" ]
       interval: 5s
