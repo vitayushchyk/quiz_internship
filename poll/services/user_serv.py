@@ -1,10 +1,10 @@
 import jwt
 
 from poll.db.model_users import UniqueViolation, User, UserRepository
-from poll.schemas.users import SignUpReq, TokenData, UserUpdateRes
+from poll.schemas.user_schemas import SignUpReq, TokenData, UserUpdateRes
 from poll.services.auth_serv import decode_token
-from poll.services.exc.auth import JWTTokenInvalid
-from poll.services.exc.user import (
+from poll.services.exc.auth_exc import JWTTokenInvalid
+from poll.services.exc.user_exc import (
     UserAlreadyExist,
     UserForbidden,
     UserNotAuthenticated,

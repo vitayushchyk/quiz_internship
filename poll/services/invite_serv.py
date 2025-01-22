@@ -3,13 +3,17 @@ from poll.db.model_invite import InviteRepository, InviteStatus
 from poll.db.model_users import UserRepository
 from poll.services.exc.company_exc import CompanyNotFoundByID
 from poll.services.exc.invite_exc import (
-    InvalidInviteAlreadyRejectedError,
+    CannotInviteYourselfError,
+    DeniedUserError,
+    InvalidInvitationAlreadyRejectedError,
+    InvitationAcceptedSuccessfully,
+    InvitationAlreadyAcceptedError,
     InvitationAlreadyExistError,
     InvitationNotExistsError,
-    InviteAlreadyAcceptedError,
+    InvitationRejectedSuccessfully,
     PermissionDeniedError,
 )
-from poll.services.exc.user import UserNotFound
+from poll.services.exc.user_exc import UserNotFound
 
 
 class InviteCRUD:
@@ -23,109 +27,163 @@ class InviteCRUD:
         self.user_repo = user_repo
         self.company_repo = company_repo
 
-    async def owner_send_invite(
-        self, company_id: int, user_id: int, current_user_id: int
+    async def _get_invite_or_raise(
+        self,
+        invite_id: int = None,
+        company_id: int = None,
+        user_id: int = None,
     ):
         logger.info(
-            f"Checking if current_user_id={current_user_id} is the owner of company_id={company_id}..."
+            f"_get_invite_or_raise: invite_id={invite_id}, company_id={company_id}, user_id={user_id}"
         )
-        is_owner = await self.company_repo.check_owner(company_id, current_user_id)
-        if not is_owner:
-            raise PermissionDeniedError
-        logger.info(f"Checking if company with ID {company_id} exists...")
-        check_company = await self.company_repo.get_company_by_id(company_id)
-        if not check_company:
-            raise CompanyNotFoundByID(company_id)
+        invite = await self.invite_repo.get_invite(
+            invite_id=invite_id, company_id=company_id, user_id=user_id
+        )
+        if not invite:
+            raise InvitationNotExistsError
+        return invite
 
-        logger.info(f"Checking if user with ID {user_id} exists...")
-        check_user = await self.user_repo.get_user_by_id(user_id)
-        if not check_user:
-            raise UserNotFound(user_id)
-        existing_invite = await self.invite_repo.get_invite_by_id(
-            company_id=company_id, user_id=user_id
+    async def _check_owner_or_raise(
+        self,
+        company_id: int,
+        current_user_id: int,
+    ):
+        logger.info(
+            f"_check_owner_or_raise: company_id={company_id}, current_user_id={current_user_id}"
         )
-        if existing_invite:
-            raise InvitationAlreadyExistError(user_id)
+        if not await self.company_repo.check_owner(company_id, current_user_id):
+            raise PermissionDeniedError
+
+    async def _validate_and_update_status(
+        self,
+        invite_id: int,
+        new_status: InviteStatus,
+        current_user_id: int,
+        is_owner: bool = False,
+    ):
+        invite = await self._get_invite_or_raise(invite_id=invite_id)
 
         logger.info(
-            f"Creating invite for company_id={company_id} and user_id={user_id}..."
+            f"Validating update: invite_user_id={invite.user_id}, current_user_id={current_user_id}, "
+            f"current_status={invite.invite_status}, new_status={new_status}, is_owner={is_owner}"
         )
+
+        if not is_owner and invite.user_id != current_user_id:
+            raise DeniedUserError()
+
+        if invite.invite_status == new_status:
+            if new_status == InviteStatus.ACCEPTED:
+                raise InvitationAlreadyAcceptedError(invitation_id=invite_id)
+            elif new_status == InviteStatus.REJECTED:
+                raise InvalidInvitationAlreadyRejectedError(invitation_id=invite_id)
+
+        await self.invite_repo.update_invite_status(invite_id, new_status)
+
+        if new_status == InviteStatus.ACCEPTED:
+            raise InvitationAcceptedSuccessfully(status=new_status.name)
+        elif new_status == InviteStatus.REJECTED:
+            raise InvitationRejectedSuccessfully(status=new_status.name)
+
+    async def owner_send_invite(
+        self,
+        company_id: int,
+        user_id: int,
+        current_user_id: int,
+    ):
+        logger.info(
+            f"Owner {current_user_id} sending invite to user {user_id} for company {company_id}"
+        )
+        await self._check_owner_or_raise(company_id, current_user_id)
+
+        if user_id == current_user_id:
+            raise CannotInviteYourselfError
+
+        if not await self.company_repo.get_company_by_id(company_id):
+            raise CompanyNotFoundByID(company_id)
+        if not await self.user_repo.get_user_by_id(user_id):
+            raise UserNotFound(user_id)
+
+        if await self.invite_repo.get_invite(company_id=company_id, user_id=user_id):
+            raise InvitationAlreadyExistError(user_id)
 
         return await self.invite_repo.add_invite(company_id=company_id, user_id=user_id)
 
     async def owner_cancel_invite(
-        self, company_id: int, user_id: int, current_user_id: int
+        self,
+        company_id: int,
+        user_id: int,
+        current_user_id: int,
     ):
         logger.info(
-            f"Trying to cancel invite for user_id={user_id} in company_id={company_id} by current_user_id={current_user_id}"
+            f"Owner {current_user_id} canceling invite (company_id={company_id}, user_id={user_id})"
+        )
+        await self._check_owner_or_raise(company_id, current_user_id)
+        invite = await self._get_invite_or_raise(company_id=company_id, user_id=user_id)
+        await self.invite_repo.delete_invite(
+            company_id=invite.company_id, user_id=invite.user_id
         )
 
-        logger.info(f"Verifying ownership for company_id={company_id}...")
-        is_owner = await self.company_repo.check_owner(company_id, current_user_id)
-        if not is_owner:
-            raise PermissionDeniedError
-
-        logger.info(
-            f"Checking if invite exists for user_id={user_id} in company_id={company_id}..."
-        )
-        invite = await self.invite_repo.get_invite_by_id(
-            company_id=company_id, user_id=user_id
-        )
-        if not invite:
-            raise InvitationNotExistsError
-
-        logger.info(
-            f"Deleting invite for user_id={user_id} in company_id={company_id}..."
-        )
-        await self.invite_repo.delete_invite(company_id=company_id, user_id=user_id)
-        return
-
-    async def user_accept_invite(self, invite_id: int, current_user_id: int):
-        logger.info(
-            f"User {current_user_id} attempting to accept invite {invite_id}..."
+    async def user_accept_invite(
+        self,
+        invite_id: int,
+        current_user_id: int,
+    ):
+        logger.info(f"User {current_user_id} accepting invite {invite_id}")
+        return await self._validate_and_update_status(
+            invite_id, InviteStatus.ACCEPTED, current_user_id
         )
 
-        logger.info(f"Checking if invite exists for user_id={current_user_id}...")
-
-        invite = await self.invite_repo.get_invite_by_id(invite_id=invite_id)
-
-        if not invite:
-            raise InvitationNotExistsError
-
-        if invite.user_id != current_user_id:
-            raise PermissionDeniedError
-
-        if invite.invite_status == InviteStatus.ACCEPTED:
-            raise InviteAlreadyAcceptedError(invite_id)
-
-        invite = await self.invite_repo.accept_invite(invite_id=invite_id)
-        logger.info(
-            f"Invite {invite_id} accepted successfully by user {current_user_id}."
-        )
-        return invite
-
-    async def user_reject_invite(self, invite_id: int, current_user_id: int):
-        logger.info(
-            f"User {current_user_id} attempting to reject invite {invite_id}..."
+    async def user_reject_invite(
+        self,
+        invite_id: int,
+        current_user_id: int,
+    ):
+        logger.info(f"User {current_user_id} rejecting invite {invite_id}")
+        return await self._validate_and_update_status(
+            invite_id, InviteStatus.REJECTED, current_user_id
         )
 
-        invite = await self.invite_repo.get_invite_by_id(invite_id=invite_id)
-
-        if not invite:
-            raise InvitationNotExistsError
-
-        if invite.user_id != current_user_id:
-            raise PermissionDeniedError
-
-        if invite.invite_status == InviteStatus.REJECTED:
-            raise InvalidInviteAlreadyRejectedError(invite_id)
-
-        invite = await self.invite_repo.reject_invite(invite_id=invite_id)
-        logger.info(
-            f"Invite {invite_id} accepted successfully by user {current_user_id}."
-        )
-        return invite
-
-    async def show_user_invites(self, current_user_id: int):
-        logger.info(f"Fetching invites for user_id {current_user_id}...")
+    async def show_user_invites(
+        self,
+        current_user_id: int,
+    ):
+        logger.info(f"Fetching invites for user {current_user_id}")
         return await self.invite_repo.get_user_invites(user_id=current_user_id)
+
+    async def user_send_join_request(
+        self,
+        company_id: int,
+        current_user_id: int,
+    ):
+        logger.info(
+            f"User {current_user_id} sending join request to company {company_id}"
+        )
+        if await self.company_repo.check_owner(company_id, current_user_id):
+            raise CannotInviteYourselfError
+
+        if not await self.company_repo.get_company_by_id(company_id):
+            raise CompanyNotFoundByID(company_id)
+
+        if await self.invite_repo.get_invite(
+            company_id=company_id, user_id=current_user_id
+        ):
+            raise InvitationAlreadyExistError(user_id=current_user_id)
+
+        return await self.invite_repo.add_invite(
+            company_id=company_id, user_id=current_user_id
+        )
+
+    async def user_cancel_join_request(
+        self,
+        company_id: int,
+        current_user_id: int,
+    ):
+        logger.info(
+            f"User {current_user_id} canceling join request for company {company_id}"
+        )
+        invite = await self._get_invite_or_raise(
+            company_id=company_id, user_id=current_user_id
+        )
+        await self.invite_repo.delete_invite(
+            company_id=invite.company_id, user_id=invite.user_id
+        )

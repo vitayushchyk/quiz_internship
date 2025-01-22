@@ -1,43 +1,70 @@
-class InviteException(Exception):
+class InvitationException(Exception):
     def __init__(self, detail: str):
         self.detail = detail
 
 
-class InvitationAcceptedSuccessfully(InviteException):
+class InvitationAcceptedSuccessfully(InvitationException):
     def __init__(self, status: str):
-        super().__init__(f"Invite accepted successfully invite_status {status}.")
+        super().__init__(
+            f"Invitation accepted successfully. Invitation status: {status}."
+        )
 
 
-class PermissionDeniedError(InviteException):
+class PermissionDeniedError(InvitationException):
     def __init__(self):
-        super().__init__(f"Permission denied: you are not the owner of the company.")
+        super().__init__("Permission denied: you are not the owner of the company.")
 
 
-class InvitationAlreadyExistError(InviteException):
+class InvitationAlreadyExistError(InvitationException):
     def __init__(self, user_id: int):
-        super().__init__(f"Invite already send for this user with ID {user_id}")
+        super().__init__(f"Invitation already sent for the user with ID {user_id}.")
 
 
-class InvitationNotExistsError(InviteException):
+class InvitationNotExistsError(InvitationException):
     def __init__(self):
-        super().__init__(f"Invite not found")
+        super().__init__("Invitation not found.")
 
 
-class InvalidInviteSearchParams(InviteException):
+class InvalidInvitationSearchParams(InvitationException):
     def __init__(self):
-        super().__init__("You must provide either invite_id or company_id and user_id.")
+        super().__init__(
+            "You must provide either invitation_id or company_id and user_id."
+        )
 
 
-class InviteAlreadyAcceptedError(InviteException):
-    def __init__(self, invite_id: int):
-        super().__init__(f"Invite with ID {invite_id} has already been accepted.")
+class InvitationAlreadyAcceptedError(InvitationException):
+    def __init__(self, invitation_id: int):
+        super().__init__(
+            f"Invitation with ID {invitation_id} has already been accepted."
+        )
 
 
-class InviteRejectedSuccessfully(InviteException):
+class InvitationRejectedSuccessfully(InvitationException):
     def __init__(self, status: str):
-        super().__init__(f"Invite with ID {status} has been rejected.")
+        super().__init__(f"Invitation with ID {status} has been rejected.")
 
 
-class InvalidInviteAlreadyRejectedError(InviteException):
-    def __init__(self, invite_id: int):
-        super().__init__(f"Invite with ID {invite_id} has already been rejected.")
+class InvalidInvitationAlreadyRejectedError(InvitationException):
+    def __init__(self, invitation_id: int):
+        super().__init__(
+            f"Invitation with ID {invitation_id} has already been rejected."
+        )
+
+
+class CannotInviteYourselfError(InvitationException):
+    def __init__(self):
+        super().__init__(
+            "You cannot send an invitation or request to join because you are the owner of this company."
+        )
+
+
+class InvalidActionError(InvitationException):
+    def __init__(self, action: str):
+        super().__init__(
+            f"The action '{action}' is invalid. Please use 'accept' or 'reject'."
+        )
+
+
+class DeniedUserError(InvitationException):
+    def __init__(self):
+        super().__init__("You do not have permission to perform this action.")

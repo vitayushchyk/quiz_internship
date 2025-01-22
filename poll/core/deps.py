@@ -7,10 +7,10 @@ from poll.db.connection import get_async_session
 from poll.db.model_company import CompanyRepository
 from poll.db.model_invite import InviteRepository
 from poll.db.model_users import User, UserRepository
-from poll.schemas.users import oauth2_scheme
+from poll.schemas.user_schemas import oauth2_scheme
 from poll.services.invite_serv import InviteCRUD
 from poll.services.password_hasher import PasswordHasher
-from poll.services.users_serv import UserCRUD
+from poll.services.user_serv import UserCRUD
 
 
 async def get_password_hasher():

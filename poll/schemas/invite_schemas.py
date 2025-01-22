@@ -16,3 +16,7 @@ class InviteRes(BaseModel):
 class InviteCreateReq(BaseModel):
     company_id: int
     user_id: int
+
+
+class InviteUserReq(BaseModel):
+    company_id: int
