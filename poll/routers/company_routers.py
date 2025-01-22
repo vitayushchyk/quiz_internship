@@ -5,7 +5,7 @@ from fastapi.params import Depends
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 
-from poll.core.deps import get_company_repository, get_current_user_id
+from poll.core.deps import get_company_repository, get_current_user_id, get_invite_crud
 from poll.schemas.company_schemas import (
     CompanyDetailRes,
     CompanyVisibilityReq,
@@ -19,6 +19,8 @@ from poll.services.exc.company_exc import (
     CompanyStatusNotValid,
     UnauthorizedCompanyAccess,
 )
+from poll.services.exc.user_exc import UserNotMemberError
+from poll.services.invite_serv import InviteCRUD
 
 company_router = APIRouter(prefix="/company", tags=["company"])
 
@@ -113,6 +115,22 @@ async def change_company_visibility(
         status=company_status,
     )
     return updated_company
+
+
+@company_router.delete(
+    "/{company_id}/user/{user_id}/",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Owner removes a user from the company",
+)
+async def remove_user_from_company(
+    company_id: int,
+    user_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    invite_service: InviteCRUD = Depends(get_invite_crud),
+):
+    await invite_service.owner_remove_user(
+        company_id=company_id, user_id=user_id, current_user_id=current_user_id
+    )
 
 
 async def company_not_found_by_id(_: Request, exc: CompanyNotFoundByID):

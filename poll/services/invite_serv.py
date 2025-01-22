@@ -13,7 +13,7 @@ from poll.services.exc.invite_exc import (
     InvitationRejectedSuccessfully,
     PermissionDeniedError,
 )
-from poll.services.exc.user_exc import UserNotFound
+from poll.services.exc.user_exc import UserNotFound, UserNotMemberError
 
 
 class InviteCRUD:
@@ -123,6 +123,21 @@ class InviteCRUD:
             company_id=invite.company_id, user_id=invite.user_id
         )
 
+    async def owner_remove_user(
+        self, company_id: int, user_id: int, current_user_id: int
+    ):
+        logger.info(
+            f"Owner {current_user_id} removing user {user_id} from company {company_id}"
+        )
+
+        await self._check_owner_or_raise(company_id, current_user_id)
+
+        deleted = await self.invite_repo.delete_invite(
+            company_id=company_id, user_id=user_id
+        )
+        if not deleted:
+            raise UserNotMemberError()
+
     async def user_accept_invite(
         self,
         invite_id: int,
@@ -187,3 +202,15 @@ class InviteCRUD:
         await self.invite_repo.delete_invite(
             company_id=invite.company_id, user_id=invite.user_id
         )
+
+    async def user_leave_company(self, company_id: int, current_user_id: int):
+        logger.info(f"User {current_user_id} leaving company {company_id}")
+        await self.company_repo.get_company_by_id(company_id)
+        if not company_id:
+            raise CompanyNotFoundByID(company_id)
+
+        leave = await self.invite_repo.delete_invite(
+            company_id=company_id, user_id=current_user_id
+        )
+        if not leave:
+            raise UserNotMemberError()

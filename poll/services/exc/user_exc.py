@@ -16,3 +16,10 @@ class UserNotAuthenticated(Exception):
 class UserForbidden(Exception):
     def __init__(self):
         self.detail = "Access to the requested resource is forbidden."
+
+
+class UserNotMemberError(Exception):
+    def __init__(
+        self,
+    ):
+        self.detail = f"User is not a member of the company."

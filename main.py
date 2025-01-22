@@ -28,13 +28,14 @@ from poll.routers.invite_routers import (
     permission_denied_handler,
     user_not_found,
 )
-from poll.routers.users import (
-    router_user,
+from poll.routers.user_routers import (
     token_expired_handler,
     token_invalid_handler,
     user_already_exists_handler,
     user_cannot_delete_account_handler,
     user_not_found_handler,
+    user_not_member_of_company_handler,
+    user_router,
 )
 from poll.services.exc.auth_exc import JWTTokenExpired, JWTTokenInvalid
 from poll.services.exc.company_exc import (
@@ -60,6 +61,7 @@ from poll.services.exc.user_exc import (
     UserForbidden,
     UserNotAuthenticated,
     UserNotFound,
+    UserNotMemberError,
 )
 
 logging.basicConfig()
@@ -76,7 +78,7 @@ app.add_middleware(
 )
 
 app.include_router(health_check_router)
-app.include_router(router_user)
+app.include_router(user_router)
 
 app.include_router(router_auth)
 app.include_router(company_router)
@@ -87,6 +89,8 @@ app.add_exception_handler(UserNotAuthenticated, user_not_authenticated_handler)
 app.add_exception_handler(UserForbidden, user_cannot_delete_account_handler)
 app.add_exception_handler(JWTTokenInvalid, token_invalid_handler)
 app.add_exception_handler(JWTTokenExpired, token_expired_handler)
+
+app.add_exception_handler(UserNotMemberError, user_not_member_of_company_handler)
 app.add_exception_handler(CompanyNotFoundByID, company_not_found_by_id)
 app.add_exception_handler(UnauthorizedCompanyAccess, company_permission_handler)
 app.add_exception_handler(CompanyAlreadyExist, company_already_exists_handler)
