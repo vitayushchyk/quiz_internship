@@ -4,39 +4,50 @@ from fastapi import APIRouter, Depends, status
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 
-from poll.core.deps import get_current_user, get_user_crud
+from poll.core.deps import (
+    get_current_user,
+    get_current_user_id,
+    get_invite_crud,
+    get_user_crud,
+)
 from poll.db.model_users import User
 from poll.schemas.user_schemas import SignUpReq, UserDetailRes, UserUpdateRes
 from poll.services.exc.auth_exc import JWTTokenExpired, JWTTokenInvalid
-from poll.services.exc.user_exc import UserAlreadyExist, UserForbidden, UserNotFound
+from poll.services.exc.user_exc import (
+    UserAlreadyExist,
+    UserForbidden,
+    UserNotFound,
+    UserNotMemberError,
+)
+from poll.services.invite_serv import InviteCRUD
 from poll.services.user_serv import UserCRUD
 
-router_user = APIRouter(prefix="/user", tags=["user"])
+user_router = APIRouter(prefix="/user", tags=["user"])
 
 
-@router_user.get("/list/", summary="Get All Users", response_model=List[UserDetailRes])
+@user_router.get("/list/", summary="Get All Users", response_model=List[UserDetailRes])
 async def users_list(page: int = 1, user_service: UserCRUD = Depends(get_user_crud)):
     return await user_service.get_all_users(page=page)
 
 
-@router_user.get("/me/", response_model=UserDetailRes)
+@user_router.get("/me/", response_model=UserDetailRes)
 def read_users_me(current_user: int = Depends(get_current_user)):
     return current_user
 
 
-@router_user.get("/{user_id}/", summary="Get User By ID", response_model=UserDetailRes)
+@user_router.get("/{user_id}/", summary="Get User By ID", response_model=UserDetailRes)
 async def user_by_id(user_id: int, user_service: UserCRUD = Depends(get_user_crud)):
     return await user_service.get_user_by_id(user_id)
 
 
-@router_user.post(
+@user_router.post(
     "/", status_code=status.HTTP_201_CREATED, response_model=UserDetailRes
 )
 async def create_user(user: SignUpReq, user_service: UserCRUD = Depends(get_user_crud)):
     return await user_service.create_user(user)
 
 
-@router_user.put(
+@user_router.put(
     "/{user_id}/", status_code=status.HTTP_200_OK, response_model=UserUpdateRes
 )
 async def update_user(
@@ -50,7 +61,7 @@ async def update_user(
     )
 
 
-@router_user.delete("/{user_id}/", status_code=status.HTTP_204_NO_CONTENT)
+@user_router.delete("/{user_id}/", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: int,
     current_user: User = Depends(get_current_user),
@@ -61,6 +72,21 @@ async def delete_user(
     except UserForbidden:
         raise UserForbidden
     return
+
+
+@user_router.delete(
+    "/leave/{company_id}/",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="User leaves the company",
+)
+async def leave_company(
+    company_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    invite_service: InviteCRUD = Depends(get_invite_crud),
+):
+    await invite_service.user_leave_company(
+        company_id=company_id, current_user_id=current_user_id
+    )
 
 
 async def user_not_found_handler(_: Request, exc: UserNotFound):
@@ -81,6 +107,13 @@ async def user_already_exists_handler(_: Request, exc: UserAlreadyExist):
     return JSONResponse(
         content={"details": exc.detail},
         status_code=status.HTTP_409_CONFLICT,
+    )
+
+
+async def user_not_member_of_company_handler(_: Request, exc: UserNotMemberError):
+    return JSONResponse(
+        content={"details": exc.detail},
+        status_code=status.HTTP_404_NOT_FOUND,
     )
 
 
