@@ -6,10 +6,10 @@ from fastapi.responses import JSONResponse
 
 from poll.core.deps import get_current_user, get_user_crud
 from poll.db.model_users import User
-from poll.schemas.users import SignUpReq, UserDetailRes, UserUpdateRes
-from poll.services.exc.auth import JWTTokenExpired, JWTTokenInvalid
-from poll.services.exc.user import UserAlreadyExist, UserForbidden, UserNotFound
-from poll.services.users_serv import UserCRUD
+from poll.schemas.user_schemas import SignUpReq, UserDetailRes, UserUpdateRes
+from poll.services.exc.auth_exc import JWTTokenExpired, JWTTokenInvalid
+from poll.services.exc.user_exc import UserAlreadyExist, UserForbidden, UserNotFound
+from poll.services.user_serv import UserCRUD
 
 router_user = APIRouter(prefix="/user", tags=["user"])
 

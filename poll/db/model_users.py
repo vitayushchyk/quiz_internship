@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import relationship
 
 from poll.db.connection import Base
-from poll.schemas.users import SignUpReq, UserUpdateRes
+from poll.schemas.user_schemas import SignUpReq, UserUpdateRes
 from poll.services.pagination import Pagination
 
 logger = getLogger(__name__)

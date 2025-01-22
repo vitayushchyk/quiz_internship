@@ -6,10 +6,10 @@ from fastapi.responses import JSONResponse
 
 from poll.core.conf import settings
 from poll.core.deps import get_user_crud
-from poll.schemas.users import Auth, Token
+from poll.schemas.user_schemas import Auth, Token
 from poll.services.auth_serv import create_access_token
-from poll.services.exc.user import UserNotAuthenticated
-from poll.services.users_serv import UserCRUD
+from poll.services.exc.user_exc import UserNotAuthenticated
+from poll.services.user_serv import UserCRUD
 
 router_auth = APIRouter(prefix="/auth", tags=["auth"])
 

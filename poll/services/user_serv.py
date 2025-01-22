@@ -1,10 +1,10 @@
 import jwt
 
 from poll.db.model_users import UniqueViolation, User, UserRepository
-from poll.schemas.users import SignUpReq, TokenData, UserUpdateRes
+from poll.schemas.user_schemas import SignUpReq, TokenData, UserUpdateRes
 from poll.services.auth_serv import decode_token
-from poll.services.exc.auth import JWTTokenInvalid
-from poll.services.exc.user import (
+from poll.services.exc.auth_exc import JWTTokenInvalid
+from poll.services.exc.user_exc import (
     UserAlreadyExist,
     UserForbidden,
     UserNotAuthenticated,
@@ -57,7 +57,7 @@ class UserCRUD:
 
         if current_user.id != user_id:
             raise UserForbidden()
-        await self.user_repository.delete_user(user)
+        await self.user_repository.delete_user(user_id=user_id)
         return
 
     async def get_current_user(self, jwt_token: str) -> User | None:
