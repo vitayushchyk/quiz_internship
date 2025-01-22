@@ -57,7 +57,7 @@ class UserCRUD:
 
         if current_user.id != user_id:
             raise UserForbidden()
-        await self.user_repository.delete_user(user)
+        await self.user_repository.delete_user(user_id=user_id)
         return
 
     async def get_current_user(self, jwt_token: str) -> User | None:

@@ -1,3 +1,6 @@
+from tests.conftest import user_data
+
+
 def test_create_user(client):
     response = client.post(
         "/user/",
@@ -18,19 +21,15 @@ def test_create_user(client):
     }
 
 
-def test_login(client):
-    response = client.post(
-        "/auth/login/",
-        json={
-            "email": "tests@example.com",
-            "password": "sString123",
-        },
-    )
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data.get("access_token") is not None
-    assert data.get("token_type") == "bearer"
+def test_login(client, user_data):
+    login_data = {
+        "username": user_data["username"],
+        "password": user_data["password"],
+    }
+    login_response = client.post("/auth/login/", data=login_data)
+    assert login_response.status_code == 200
+    assert login_response.json()["access_token"]
+    assert login_response.json()["token_type"] == "bearer"
 
 
 def test_user_get_by_id(client):
@@ -57,21 +56,40 @@ def test_user_get_all(client):
     ]
 
 
-def test_user_update(client):
+def test_user_update(client, user_data):
+    login_data = {
+        "username": user_data["username"],
+        "password": user_data["password"],
+    }
+    login_response = client.post("/auth/login/", data=login_data)
+    token = login_response.json()["access_token"]
+
+    headers = {"Authorization": f"Bearer {token}"}
     response = client.put(
         "/user/1",
         json={
             "first_name": "Tests",
             "last_name": "Tests",
         },
+        headers=headers,
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Update failed: {response.text}"
     assert response.json() == {
         "first_name": "Tests",
         "last_name": "Tests",
     }
 
 
-def test_user_delete(client):
-    response = client.delete("/user/1")
-    assert response.status_code == 204
+def test_user_delete(client, user_data):
+    login_data = {
+        "username": user_data["username"],
+        "password": user_data["password"],
+    }
+    login_response = client.post("/auth/login/", data=login_data)
+
+    token = login_response.json()["access_token"]
+
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.delete("/user/1", headers=headers)
+    assert response.status_code == 204, f"Failed to delete user: {response.text}"

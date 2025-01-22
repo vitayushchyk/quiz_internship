@@ -8,3 +8,11 @@ from main import app
 def client():
     with TestClient(app) as client:
         yield client
+
+
+@pytest.fixture(scope="session")
+def user_data():
+    return {
+        "username": "tests@example.com",
+        "password": "sString123",
+    }
