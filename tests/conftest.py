@@ -13,6 +13,6 @@ def client():
 @pytest.fixture(scope="session")
 def user_data():
     return {
-        "username": "tests@example.com",
-        "password": "sString123",
+        "username": "string@example.com",
+        "password": "string123",
     }

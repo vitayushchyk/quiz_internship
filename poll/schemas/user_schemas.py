@@ -29,11 +29,6 @@ class UserSchema(BaseModel):
         orm_mode = True
 
 
-class SignInReq(BaseModel):
-    email: str
-    password: str
-
-
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -49,10 +44,6 @@ class SignUpReq(BaseModel):
     email: EmailStr
     password: str
 
-    @field_validator("first_name", "last_name", mode="before", check_fields=False)
-    def _validate_names(cls, v):
-        return validate_name(v)
-
 
 class UserUpdateRes(BaseModel):
     first_name: str
@@ -61,10 +52,6 @@ class UserUpdateRes(BaseModel):
     @field_validator("first_name", "last_name", mode="before", check_fields=False)
     def _validate_names(cls, v):
         return validate_name(v)
-
-
-class UsersListRes(BaseModel):
-    users: List[UserSchema]
 
 
 class UserDetailRes(BaseModel):
@@ -84,9 +71,9 @@ class Auth(OAuth2PasswordRequestForm):
             Form(),
             Doc(
                 """
-                                `username` string. The OAuth2 spec requires the exact field name
-                                `username`.
-                                """
+                                    `username` string. The OAuth2 spec requires the exact field name
+                                    `username`.
+                                    """
             ),
         ],
         password: Annotated[
@@ -94,9 +81,9 @@ class Auth(OAuth2PasswordRequestForm):
             Form(),
             Doc(
                 """
-                                `password` string. The OAuth2 spec requires the exact field name
-                                `password".
-                                """
+                                    `password` string. The OAuth2 spec requires the exact field name
+                                    `password".
+                                    """
             ),
         ]
     ):

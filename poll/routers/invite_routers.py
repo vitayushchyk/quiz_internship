@@ -1,26 +1,11 @@
 from typing import List
 
 from fastapi import APIRouter, Depends
-from requests import Request
 from starlette import status
-from starlette.responses import JSONResponse
 
-from poll.core.deps import get_current_user_id, get_invite_crud
-from poll.db.model_invite import InviteStatus, logger
-from poll.schemas.invite_schemas import InviteCreateReq, InviteRes, InviteUserReq
-from poll.services.exc.company_exc import CompanyNotFoundByID
-from poll.services.exc.invite_exc import (
-    CannotInviteYourselfError,
-    DeniedUserError,
-    InvalidActionError,
-    InvalidInvitationAlreadyRejectedError,
-    InvitationAcceptedSuccessfully,
-    InvitationAlreadyExistError,
-    InvitationNotExistsError,
-    InvitationRejectedSuccessfully,
-    PermissionDeniedError,
-)
-from poll.services.exc.user_exc import UserNotFound
+from poll.core.deps import get_current_user, get_current_user_id, get_invite_crud
+from poll.db.model_users import User
+from poll.schemas.invite_schemas import InviteRes, InviteStatusRequest
 from poll.services.invite_serv import InviteCRUD
 
 invite_router = APIRouter(prefix="/invite", tags=["Invite"])
@@ -30,122 +15,136 @@ invite_router = APIRouter(prefix="/invite", tags=["Invite"])
     "/",
     response_model=InviteRes,
     status_code=status.HTTP_201_CREATED,
-    summary="Owner creates an invite",
+    summary="The owner sends an invitation",
+    description="The company owner sends the user an invitation to join the company.",
 )
-async def create_invite_to_user(
-    request: InviteCreateReq,
+async def send_invite_to_user(
+    company_id: int,
+    target_user_id: int,
+    current_user: User = Depends(get_current_user),
+    invite_crud: InviteCRUD = Depends(get_invite_crud),
+):
+    invite = await invite_crud.owner_send_invite(
+        company_id=company_id,
+        target_user_id=target_user_id,
+        current_user_id=current_user.id,
+    )
+    return invite
+
+
+@invite_router.put(
+    "/owner/{company_id}/{invite_id}/{status}/",
+    summary="The owner updates the status of the invitation",
+    description="The company owner updates the status of the invitation for the user (accept/reject).",
+    status_code=status.HTTP_200_OK,
+)
+async def user_response_to_invite_route(
+    company_id: int,
+    invite_id: int,
+    new_status: InviteStatusRequest,
     current_user_id: int = Depends(get_current_user_id),
     invite_service: InviteCRUD = Depends(get_invite_crud),
 ):
-    return await invite_service.owner_send_invite(
-        company_id=request.company_id,
-        user_id=request.user_id,
+    return await invite_service.owner_update_invite_status(
+        company_id=company_id,
+        invite_id=invite_id,
+        new_status=new_status.invite_status,
         current_user_id=current_user_id,
     )
 
 
 @invite_router.delete(
-    "/{company_id}/{user_id}/",
+    "/owner/decline/invite/{company_id}/user/{user_id}/",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Owner cancels an invite",
+    summary="The owner cancels an invite",
+    description="The company owner cancels the invitation sent to a user.",
 )
-async def cancel_invite_to_user(
+async def decline_invite_to_user(
+    company_id: int,
+    target_user_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    invite_service: InviteCRUD = Depends(get_invite_crud),
+):
+    await invite_service.owner_cancel_invite(
+        company_id=company_id,
+        target_user_id=target_user_id,
+        current_user_id=current_user_id,
+    )
+
+
+@invite_router.delete(
+    "/owner/remove/{company_id}/user/{user_id}/",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="The owner removes a user from the company",
+    description="The company owner removes a user from the company.",
+)
+async def remove_user_from_company(
     company_id: int,
     user_id: int,
     current_user_id: int = Depends(get_current_user_id),
     invite_service: InviteCRUD = Depends(get_invite_crud),
 ):
-    await invite_service.owner_cancel_invite(
-        company_id=company_id, user_id=user_id, current_user_id=current_user_id
+    await invite_service.owner_remove_user(
+        company_id=company_id, target_user_id=user_id, current_user_id=current_user_id
     )
-
-
-@invite_router.put(
-    "/{company_id}/requests/{invite_id}/{action}/",
-    summary="Owner Change user's join request status (accept/reject)",
-    response_model=InviteRes,
-)
-async def owner_update_invite_status(
-    company_id: int,
-    invite_id: int,
-    action: str,
-    current_user_id: int = Depends(get_current_user_id),
-    invite_service: InviteCRUD = Depends(get_invite_crud),
-):
-    logger.info(
-        f"Owner {current_user_id} attempting to change invite {invite_id} for company {company_id} with action {action}"
-    )
-    await invite_service._check_owner_or_raise(company_id, current_user_id)
-    if action == "accept":
-        new_status = InviteStatus.ACCEPTED
-    elif action == "reject":
-        new_status = InviteStatus.REJECTED
-    else:
-        raise InvalidActionError(action)
-    updated_invite = await invite_service._validate_and_update_status(
-        invite_id=invite_id,
-        new_status=new_status,
-        current_user_id=current_user_id,
-        is_owner=True,
-    )
-
-    return updated_invite
-
-
-@invite_router.put(
-    "/{invite_id}/{action}/",
-    summary="User Change invite status (accept/reject)",
-    response_model=InviteRes,
-)
-async def update_invite_status(
-    invite_id: int,
-    action: str,
-    current_user_id: int = Depends(get_current_user_id),
-    invite_service: InviteCRUD = Depends(get_invite_crud),
-):
-    if action == "accept":
-        return await invite_service.user_accept_invite(
-            invite_id=invite_id, current_user_id=current_user_id
-        )
-    elif action == "reject":
-        return await invite_service.user_reject_invite(
-            invite_id=invite_id, current_user_id=current_user_id
-        )
-    else:
-        raise InvalidActionError(action=action)
 
 
 @invite_router.get(
     "/invites/list/",
     response_model=List[InviteRes],
-    summary="Get all invites for the current user",
+    summary="Get invites with status PENDING for the current user.",
+    description="Returns list of all invites with status PENDING for the current user.",
 )
 async def read_user_invites(
-    current_user_id: int = Depends(get_current_user_id),
+    user_id: int = Depends(get_current_user_id),
     invite_service: InviteCRUD = Depends(get_invite_crud),
 ):
-    return await invite_service.show_user_invites(current_user_id=current_user_id)
+    return await invite_service.user_show_invites(user_id=user_id)
 
 
 @invite_router.post(
-    "/join/request/",
+    "/request/{company_id}/",
+    status_code=status.HTTP_201_CREATED,
     response_model=InviteRes,
-    summary="User submits a join request to a company",
+    summary="User sends a join request",
+    description="User sends a join request for the company.",
 )
-async def create_join_request(
-    request: InviteUserReq,
+async def send_join_request(
+    company_id: int,
     current_user_id: int = Depends(get_current_user_id),
     invite_service: InviteCRUD = Depends(get_invite_crud),
 ):
     return await invite_service.user_send_join_request(
-        company_id=request.company_id, current_user_id=current_user_id
+        company_id=company_id, current_user_id=current_user_id
+    )
+
+
+@invite_router.put(
+    "/{company_id}/invites/",
+    summary="User updates their invitation status",
+    description="User updates their invitation status (accept/reject).",
+    status_code=status.HTTP_200_OK,
+)
+async def user_response_to_invite_route(
+    company_id: int,
+    invite_id: int,
+    new_status: InviteStatusRequest,
+    current_user_id: int = Depends(get_current_user_id),
+    invite_service: InviteCRUD = Depends(get_invite_crud),
+):
+    return await invite_service.user_update_invite_status(
+        company_id=company_id,
+        invite_id=invite_id,
+        new_status=new_status.invite_status,
+        current_user_id=current_user_id,
     )
 
 
 @invite_router.delete(
-    "/join/request/{company_id}/",
+    "/user/decline/request/{company_id}/",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="User cancels their join request",
+    description="User cancels their join request for the company.",
 )
 async def cancel_join_request(
     company_id: int,
@@ -157,91 +156,16 @@ async def cancel_join_request(
     )
 
 
-async def company_not_found_by_id_handler(_: Request, exc: CompanyNotFoundByID):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_404_NOT_FOUND,
-    )
-
-
-async def user_not_found(_: Request, exc: UserNotFound):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_404_NOT_FOUND,
-    )
-
-
-async def invite_already_exists_handler(_: Request, exc: InvitationAlreadyExistError):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_409_CONFLICT,
-    )
-
-
-async def permission_denied_handler(_: Request, exc: PermissionDeniedError):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_403_FORBIDDEN,
-    )
-
-
-async def invite_not_exists_handler(_: Request, exc: InvitationNotExistsError):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_404_NOT_FOUND,
-    )
-
-
-async def invite_already_accepted_handler(_: Request, exc: InvitationAlreadyExistError):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_409_CONFLICT,
-    )
-
-
-async def denied_action_handler(_: Request, exc: DeniedUserError):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_403_FORBIDDEN,
-    )
-
-
-async def invite_accepted_successfully_handler(
-    _: Request, exc: InvitationAcceptedSuccessfully
+@invite_router.delete(
+    "/user/leave/{company_id}/",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="User leaves the company",
+)
+async def user_leave_company(
+    company_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    invite_service: InviteCRUD = Depends(get_invite_crud),
 ):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_200_OK,
-    )
-
-
-async def invite_rejected_successfully_handler(
-    _: Request, exc: InvitationRejectedSuccessfully
-):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_200_OK,
-    )
-
-
-async def invite_already_rejected_handler(
-    _: Request, exc: InvalidInvitationAlreadyRejectedError
-):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_409_CONFLICT,
-    )
-
-
-async def cannot_invite_yourself_handler(_: Request, exc: CannotInviteYourselfError):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_400_BAD_REQUEST,
-    )
-
-
-async def invalid_action_handler(_: Request, exc: InvalidActionError):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_400_BAD_REQUEST,
+    await invite_service.user_leave_company(
+        company_id=company_id, current_user_id=current_user_id
     )

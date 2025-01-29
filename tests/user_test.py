@@ -5,19 +5,19 @@ def test_create_user(client):
     response = client.post(
         "/user/",
         json={
-            "first_name": "test",
-            "last_name": "test",
-            "email": "tests@example.com",
-            "password": "sString123",
+            "first_name": "string",
+            "last_name": "string",
+            "email": "string@example.com",
+            "password": "string123",
         },
     )
     assert response.status_code == 201
     result = response.json()
     result.pop("id")
     assert result == {
-        "first_name": "Test",
-        "last_name": "Test",
-        "email": "tests@example.com",
+        "first_name": "string",
+        "last_name": "string",
+        "email": "string@example.com",
     }
 
 
@@ -37,9 +37,9 @@ def test_user_get_by_id(client):
     assert response.status_code == 200
     assert response.json() == {
         "id": 1,
-        "first_name": "Test",
-        "last_name": "Test",
-        "email": "tests@example.com",
+        "first_name": "string",
+        "last_name": "string",
+        "email": "string@example.com",
     }
 
 
@@ -49,9 +49,9 @@ def test_user_get_all(client):
     assert response.json() == [
         {
             "id": 1,
-            "first_name": "Test",
-            "last_name": "Test",
-            "email": "tests@example.com",
+            "first_name": "string",
+            "last_name": "string",
+            "email": "string@example.com",
         }
     ]
 
@@ -68,15 +68,15 @@ def test_user_update(client, user_data):
     response = client.put(
         "/user/1",
         json={
-            "first_name": "Tests",
-            "last_name": "Tests",
+            "first_name": "string",
+            "last_name": "string",
         },
         headers=headers,
     )
     assert response.status_code == 200, f"Update failed: {response.text}"
     assert response.json() == {
-        "first_name": "Tests",
-        "last_name": "Tests",
+        "first_name": "String",
+        "last_name": "String",
     }
 
 

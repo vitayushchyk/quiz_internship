@@ -4,7 +4,7 @@ from poll.schemas.company_schemas import (
     CreateCompanyReq,
     UpdateCompanyReq,
 )
-from poll.services.exc.company_exc import CompanyNotFoundByID
+from poll.services.exc.base_exc import CompanyNotFoundByID
 
 
 class CompanyCRUD:
