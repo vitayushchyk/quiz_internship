@@ -1,11 +1,9 @@
 import jwt
-from pydantic import ValidationError
 
 from poll.db.model_users import UniqueViolation, User, UserRepository
 from poll.schemas.user_schemas import SignUpReq, TokenData, UserUpdateRes
 from poll.services.auth_serv import decode_token
 from poll.services.exc.base_exc import (
-    InvalidEmailError,
     JWTTokenInvalid,
     UserAlreadyExist,
     UserForbidden,
@@ -38,8 +36,6 @@ class UserCRUD:
         try:
             user.password = self.hasher.hash_password(user.password)
             return await self.user_repository.create_user(user)
-        except ValidationError as e:
-            raise InvalidEmailError(str(e))
         except UniqueViolation:
             raise UserAlreadyExist(str(user.email))
 
