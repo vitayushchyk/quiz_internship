@@ -144,3 +144,11 @@ class InvalidInvitationSearchParams(MeduzzenBaseHttpException):
             status_code=400,
             detail="You must provide either invitation_id or company_id and user_id.",
         )
+
+
+class InvalidEmailError(MeduzzenBaseHttpException):
+    def __init__(self, email: str):
+        super().__init__(
+            status_code=400,
+            detail=f"Invalid email format provided: {email}. Please provide a valid email address.",
+        )

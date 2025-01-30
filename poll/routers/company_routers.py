@@ -1,7 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, status
-from fastapi.params import Depends
+from fastapi import APIRouter, Depends, status
 
 from poll.core.deps import get_company_repository, get_current_user_id
 from poll.schemas.company_schemas import (

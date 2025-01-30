@@ -15,7 +15,7 @@ class InviteRes(BaseModel):
 
 
 class InviteStatusRequest(BaseModel):
-    invite_status: InviteStatus
+    invite_status: str
 
     @field_validator("invite_status")
     def validate_only_accepted_or_rejected(cls, value: InviteStatus):

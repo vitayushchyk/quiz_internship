@@ -1,10 +1,11 @@
 import re
-from typing import List
 
 from fastapi import Form
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, field_validator, validator
 from typing_extensions import Annotated, Doc
+
+from poll.services.exc.base_exc import InvalidEmailError
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/")
 
@@ -16,6 +17,13 @@ def validate_name(name: str) -> str:
             "First and last names can contain only letters and an apostrophe"
         )
     return name.title()
+
+
+def validate_email_field(email: str) -> str:
+    pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    if not re.match(pattern, email):
+        raise InvalidEmailError(email)
+    return email
 
 
 class UserSchema(BaseModel):
@@ -41,8 +49,12 @@ class TokenData(BaseModel):
 class SignUpReq(BaseModel):
     first_name: str
     last_name: str
-    email: EmailStr
+    email: str
     password: str
+
+    @field_validator("email", mode="before", check_fields=False)
+    def _validate_email(cls, v):
+        return validate_email_field(v)
 
 
 class UserUpdateRes(BaseModel):
@@ -71,9 +83,9 @@ class Auth(OAuth2PasswordRequestForm):
             Form(),
             Doc(
                 """
-                                    `username` string. The OAuth2 spec requires the exact field name
-                                    `username`.
-                                    """
+                                        `username` string. The OAuth2 spec requires the exact field name
+                                        `username`.
+                                        """
             ),
         ],
         password: Annotated[
@@ -81,9 +93,9 @@ class Auth(OAuth2PasswordRequestForm):
             Form(),
             Doc(
                 """
-                                    `password` string. The OAuth2 spec requires the exact field name
-                                    `password".
-                                    """
+                                        `password` string. The OAuth2 spec requires the exact field name
+                                        `password".
+                                        """
             ),
         ]
     ):
