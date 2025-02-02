@@ -39,38 +39,37 @@ class UserCRUD:
         except UniqueViolation:
             raise UserAlreadyExist(str(user.email))
 
+    async def update_user(
+        self, user_id: int, user_update: UserUpdateRes, current_user: User
+    ):
+        user = await self.user_repository.get_user_by_id(user_id)
+        if user is None:
+            raise UserNotFound(user_id)
+        if user_id != current_user.id:
+            raise UserForbidden()
 
-async def update_user(
-    self, user_id: int, user_update: UserUpdateRes, current_user: User
-):
-    user = await self.user_repository.get_user_by_id(user_id)
-    if user is None:
-        raise UserNotFound(user_id)
-    if user_id != current_user.id:
-        raise UserForbidden()
+        return await self.user_repository.update_user(user, user_update)
 
-    return await self.user_repository.update_user(user, user_update)
+    async def delete_user(self, user_id: int, current_user: User):
+        user = await self.user_repository.get_user_by_id(user_id)
+        if user is None:
+            raise UserNotFound(user_id)
 
+        if current_user.id != user_id:
+            raise UserForbidden()
+        await self.user_repository.delete_user(user_id=user_id)
+        return
 
-async def delete_user(self, user_id: int, current_user: User):
-    user = await self.user_repository.get_user_by_id(user_id)
-    if user is None:
-        raise UserNotFound(user_id)
-
-    if current_user.id != user_id:
-        raise UserForbidden()
-    await self.user_repository.delete_user(user_id=user_id)
-    return
-
-
-async def get_current_user(self, jwt_token: str) -> User | None:
-    try:
-        payload = decode_token(jwt_token)
-        user_id: int = payload.get("sub")
-        if user_id is None:
-            raise UserNotAuthenticated
-        token_data = TokenData(user_id=user_id)
-    except (jwt.exceptions.DecodeError, jwt.exceptions.ExpiredSignatureError) as e:
-        raise JWTTokenInvalid from e
-    user = await self.user_repository.get_user_by_id(token_data.user_id)
-    return user
+    async def get_current_user(self, jwt_token: str) -> User | None:
+        try:
+            payload = decode_token(jwt_token)
+            user_id: int = payload.get("sub")
+            if user_id is None:
+                raise UserNotAuthenticated
+            token_data = TokenData(user_id=user_id)
+        except (jwt.exceptions.DecodeError, jwt.exceptions.ExpiredSignatureError) as e:
+            raise JWTTokenInvalid from e
+        user = await self.user_repository.get_user_by_id(token_data.user_id)
+        if user is None:
+            raise UserNotFound(token_data.user_id)
+        return user

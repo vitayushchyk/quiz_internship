@@ -3,6 +3,7 @@ from typing import List
 from poll.db.model_company import CompanyRole
 from poll.db.model_invite import InviteStatus
 from poll.schemas.invite_schemas import InviteRes, InviteStatusRequest
+from poll.schemas.user_schemas import AdminRes, UserRoleRes
 from poll.services.exc.base_exc import (
     CannotDeleteYourselfError,
     CannotInviteYourselfError,
@@ -178,6 +179,66 @@ class InviteCRUD:
         )
 
         return
+
+    async def owner_assign_admin(
+        self, company_id: int, target_user_id: int, current_user_id: int
+    ):
+        is_company_exist = await self.company_repo.get_company_by_id(company_id)
+        if not is_company_exist:
+            raise CompanyNotFoundByID(company_id=company_id)
+        await self._check_permission(company_id, current_user_id, [CompanyRole.OWNER])
+        is_user_exist = await self.user_repo.get_user_by_id(user_id=target_user_id)
+        if not is_user_exist:
+            raise UserNotFound(user_id=target_user_id)
+        is_user_member = await self.company_repo.get_user_role(
+            company_id=company_id, user_id=target_user_id
+        )
+        if not is_user_member:
+            raise UserNotMemberError()
+        await self.company_repo.update_user_role(
+            company_id=company_id, user_id=target_user_id, new_role=CompanyRole.ADMIN
+        )
+
+        return UserRoleRes(
+            role=CompanyRole.ADMIN, company_id=company_id, user_id=target_user_id
+        )
+
+    async def owner_remove_admin(
+        self, company_id: int, target_user_id: int, current_user_id: int
+    ):
+        is_company_exist = await self.company_repo.get_company_by_id(company_id)
+        if not is_company_exist:
+            raise CompanyNotFoundByID(company_id=company_id)
+        await self._check_permission(company_id, current_user_id, [CompanyRole.OWNER])
+        is_user_exist = await self.user_repo.get_user_by_id(user_id=target_user_id)
+        if not is_user_exist:
+            raise UserNotFound(user_id=target_user_id)
+        is_user_member = await self.company_repo.get_user_role(
+            company_id=company_id, user_id=target_user_id
+        )
+        if not is_user_member:
+            raise UserNotMemberError()
+        await self.company_repo.update_user_role(
+            company_id=company_id, user_id=target_user_id, new_role=CompanyRole.MEMBER
+        )
+        return UserRoleRes(
+            role=CompanyRole.ADMIN, company_id=company_id, user_id=target_user_id
+        )
+
+    async def owner_get_admins(self, company_id: int, current_user_id: int):
+        is_company_exist = await self.company_repo.get_company_by_id(company_id)
+        if not is_company_exist:
+            raise CompanyNotFoundByID(company_id=company_id)
+        await self._check_permission(company_id, current_user_id, [CompanyRole.OWNER])
+        admins = await self.company_repo.get_admins(
+            company_id=company_id,
+        )
+        return [
+            AdminRes(
+                company_id=admin.company_id, user_id=admin.user_id, role=admin.role
+            )
+            for admin in admins
+        ]
 
     async def user_show_invites(self, user_id: int) -> List[InviteRes]:
         return await self.invite_repo.get_invite(user_id=user_id)

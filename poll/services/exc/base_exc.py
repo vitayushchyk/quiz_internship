@@ -152,3 +152,19 @@ class InvalidEmailError(MeduzzenBaseHttpException):
             status_code=400,
             detail=f"Invalid email format provided: {email}. Please provide a valid email address.",
         )
+
+
+class UserSuccessfullyAssignedAdmin(MeduzzenBaseHttpException):
+    def __init__(self, user_id: int):
+        super().__init__(
+            status_code=200,
+            detail=f"User with ID {user_id} has been assigned as an admin.",
+        )
+
+
+class UserRemovedFromAdminRole(MeduzzenBaseHttpException):
+    def __init__(self, user_id: int):
+        super().__init__(
+            status_code=200,
+            detail=f"User with ID {user_id} has been removed from the admin role.",
+        )

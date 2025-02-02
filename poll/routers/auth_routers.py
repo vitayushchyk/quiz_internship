@@ -9,10 +9,10 @@ from poll.services.auth_serv import create_access_token
 from poll.services.exc.base_exc import UserNotAuthenticated
 from poll.services.user_serv import UserCRUD
 
-router_auth = APIRouter(prefix="/auth", tags=["auth"])
+router_auth = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router_auth.post("/login/", status_code=status.HTTP_200_OK)
+@router_auth.post("/login/", description="Login user", status_code=status.HTTP_200_OK)
 async def login(
     form_data: Auth = Depends(), user_service: UserCRUD = Depends(get_user_crud)
 ):

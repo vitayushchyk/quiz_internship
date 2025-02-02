@@ -2,7 +2,7 @@ import re
 
 from fastapi import Form
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel, field_validator, validator
+from pydantic import BaseModel, field_validator
 from typing_extensions import Annotated, Doc
 
 from poll.services.exc.base_exc import InvalidEmailError
@@ -73,6 +73,18 @@ class UserDetailRes(BaseModel):
     email: str
 
 
+class UserRoleRes(BaseModel):
+    role: str
+    company_id: int
+    user_id: int
+
+
+class AdminRes(BaseModel):
+    company_id: int
+    user_id: int
+    role: str
+
+
 class Auth(OAuth2PasswordRequestForm):
 
     def __init__(
@@ -83,9 +95,9 @@ class Auth(OAuth2PasswordRequestForm):
             Form(),
             Doc(
                 """
-                                        `username` string. The OAuth2 spec requires the exact field name
-                                        `username`.
-                                        """
+                                            `username` string. The OAuth2 spec requires the exact field name
+                                            `username`.
+                                            """
             ),
         ],
         password: Annotated[
@@ -93,9 +105,9 @@ class Auth(OAuth2PasswordRequestForm):
             Form(),
             Doc(
                 """
-                                        `password` string. The OAuth2 spec requires the exact field name
-                                        `password".
-                                        """
+                                            `password` string. The OAuth2 spec requires the exact field name
+                                            `password".
+                                            """
             ),
         ]
     ):

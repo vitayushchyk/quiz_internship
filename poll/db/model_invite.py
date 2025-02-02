@@ -27,8 +27,13 @@ class Invite(Base):
     __tablename__ = "invites"
 
     id: int = Column(Integer, primary_key=True, nullable=False)
-    company_id: int = Column(Integer, ForeignKey("companies.id"), nullable=False)
-    user_id: int = Column(Integer, ForeignKey("users.id"), nullable=False)
+    company_id: int = Column(
+        Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False
+    )
+
+    user_id: int = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
 
     invite_status: InviteStatus = Column(
         ENUM(InviteStatus, name="invite_status"),

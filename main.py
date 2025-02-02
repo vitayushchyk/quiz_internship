@@ -13,7 +13,12 @@ from poll.routers.user_routers import user_router
 logging.basicConfig()
 logging.getLogger().setLevel(settings.get_log_level())
 
-app = FastAPI()
+app = FastAPI(
+    title="Quiz app",
+    docs_url="/docs",
+    description="Application for internship at meduzzen",
+    debug=True,
+)
 
 app.add_middleware(
     CORSMiddleware,

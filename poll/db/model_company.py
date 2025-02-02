@@ -14,6 +14,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
     select,
+    update,
 )
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.exc import IntegrityError
@@ -60,7 +61,9 @@ class Company(Base):
         nullable=False,
         default=ChangeVisibility.VISIBLE,
     )
-    owner_id: int = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner_id: int = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     created_at: datetime.date = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -68,7 +71,7 @@ class Company(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    owner = relationship("User", back_populates="companies", cascade="all, delete")
+    owner = relationship("User", back_populates="companies")
     company_user_roles = relationship(
         "CompanyUserRole", back_populates="company", cascade="all, delete"
     )
@@ -77,8 +80,13 @@ class Company(Base):
 class CompanyUserRole(Base):
     __tablename__ = "company_user_roles"
     id: int = Column(Integer, primary_key=True, nullable=False)
-    company_id: int = Column(Integer, ForeignKey("companies.id"), nullable=False)
-    user_id: int = Column(Integer, ForeignKey("users.id"), nullable=False)
+    company_id: int = Column(
+        Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: int = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+
     role: CompanyRole = Column(
         ENUM(CompanyRole, name="company_user_role"),
         nullable=False,
@@ -214,6 +222,27 @@ class CompanyRepository:
         )
         result = await self.session.execute(query)
         return result.scalar()
+
+    async def get_admins(self, company_id: int):
+        query = select(CompanyUserRole).where(
+            CompanyUserRole.company_id == company_id, CompanyUserRole.role == "admin"
+        )
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
+    async def update_user_role(
+        self, company_id: int, user_id: int, new_role: CompanyRole
+    ):
+        query = (
+            update(CompanyUserRole)
+            .where(
+                CompanyUserRole.company_id == company_id,
+                CompanyUserRole.user_id == user_id,
+            )
+            .values(role=new_role)
+        )
+        await self.session.execute(query)
+        await self.session.commit()
 
     async def add_user_to_company(
         self, company_id: int, user_id: int, role: CompanyRole
