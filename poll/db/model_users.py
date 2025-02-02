@@ -29,8 +29,8 @@ class User(Base):
     __tablename__ = "users"
 
     id: int = Column(Integer, primary_key=True, nullable=False)
-    first_name: str = Column(String)
-    last_name: str = Column(String)
+    first_name: str = Column(String, nullable=False)
+    last_name: str = Column(String, nullable=False)
     email: str = Column(String, unique=True, nullable=False)
     password: str = Column(String, nullable=False)
     is_active: bool = Column(Boolean, default=False, nullable=False)
@@ -40,6 +40,9 @@ class User(Base):
     )
     companies = relationship(
         "Company", back_populates="owner", cascade="all, delete-orphan"
+    )
+    role_in_companies = relationship(
+        "CompanyUserRole", back_populates="user", cascade="all, delete-orphan"
     )
 
 

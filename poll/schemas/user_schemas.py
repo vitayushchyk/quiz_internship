@@ -1,10 +1,11 @@
 import re
-from typing import List
 
 from fastapi import Form
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, field_validator
 from typing_extensions import Annotated, Doc
+
+from poll.services.exc.base_exc import InvalidEmailError
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login/")
 
@@ -18,6 +19,13 @@ def validate_name(name: str) -> str:
     return name.title()
 
 
+def validate_email_field(email: str) -> str:
+    pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    if not re.match(pattern, email):
+        raise InvalidEmailError(email)
+    return email
+
+
 class UserSchema(BaseModel):
     id: int | None = None
     first_name: str
@@ -27,11 +35,6 @@ class UserSchema(BaseModel):
 
     class Config:
         orm_mode = True
-
-
-class SignInReq(BaseModel):
-    email: str
-    password: str
 
 
 class Token(BaseModel):
@@ -46,12 +49,12 @@ class TokenData(BaseModel):
 class SignUpReq(BaseModel):
     first_name: str
     last_name: str
-    email: EmailStr
+    email: str
     password: str
 
-    @field_validator("first_name", "last_name", mode="before", check_fields=False)
-    def _validate_names(cls, v):
-        return validate_name(v)
+    @field_validator("email", mode="before", check_fields=False)
+    def _validate_email(cls, v):
+        return validate_email_field(v)
 
 
 class UserUpdateRes(BaseModel):
@@ -63,15 +66,23 @@ class UserUpdateRes(BaseModel):
         return validate_name(v)
 
 
-class UsersListRes(BaseModel):
-    users: List[UserSchema]
-
-
 class UserDetailRes(BaseModel):
     id: int
     first_name: str
     last_name: str
     email: str
+
+
+class UserRoleRes(BaseModel):
+    role: str
+    company_id: int
+    user_id: int
+
+
+class AdminRes(BaseModel):
+    company_id: int
+    user_id: int
+    role: str
 
 
 class Auth(OAuth2PasswordRequestForm):
@@ -84,9 +95,9 @@ class Auth(OAuth2PasswordRequestForm):
             Form(),
             Doc(
                 """
-                                `username` string. The OAuth2 spec requires the exact field name
-                                `username`.
-                                """
+                                            `username` string. The OAuth2 spec requires the exact field name
+                                            `username`.
+                                            """
             ),
         ],
         password: Annotated[
@@ -94,9 +105,9 @@ class Auth(OAuth2PasswordRequestForm):
             Form(),
             Doc(
                 """
-                                `password` string. The OAuth2 spec requires the exact field name
-                                `password".
-                                """
+                                            `password` string. The OAuth2 spec requires the exact field name
+                                            `password".
+                                            """
             ),
         ]
     ):

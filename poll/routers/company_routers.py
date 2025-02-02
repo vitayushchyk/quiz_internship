@@ -1,33 +1,30 @@
 from typing import List
 
-from fastapi import APIRouter, status
-from fastapi.params import Depends
-from fastapi.requests import Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, status
 
-from poll.core.deps import get_company_repository, get_current_user_id, get_invite_crud
+from poll.core.deps import (
+    get_company_repository,
+    get_current_user,
+    get_current_user_id,
+    get_invite_crud,
+)
+from poll.db.model_users import User
 from poll.schemas.company_schemas import (
     CompanyDetailRes,
     CompanyVisibilityReq,
     CreateCompanyReq,
     UpdateCompanyReq,
 )
+from poll.schemas.user_schemas import AdminRes
 from poll.services.company_serv import CompanyCRUD
-from poll.services.exc.company_exc import (
-    CompanyAlreadyExist,
-    CompanyNotFoundByID,
-    CompanyStatusNotValid,
-    UnauthorizedCompanyAccess,
-)
-from poll.services.exc.user_exc import UserNotMemberError
 from poll.services.invite_serv import InviteCRUD
 
-company_router = APIRouter(prefix="/company", tags=["company"])
+company_router = APIRouter(prefix="/company", tags=["Company"])
 
 
 @company_router.get(
-    "/list/",
-    summary="List all companies",
+    "/",
+    description="Get all companies",
     response_model=List[CompanyDetailRes],
 )
 async def companies_list(
@@ -38,7 +35,8 @@ async def companies_list(
 
 @company_router.get(
     "/{company_id}/",
-    summary="Get company by id",
+    description="Get company by id",
+    response_model=CompanyDetailRes,
 )
 async def company_by_id(
     company_id: int,
@@ -48,8 +46,8 @@ async def company_by_id(
 
 
 @company_router.post(
-    "/create/",
-    summary="Create a new company",
+    "/",
+    description="Create a new company",
     response_model=CreateCompanyReq,
     status_code=status.HTTP_201_CREATED,
 )
@@ -69,7 +67,11 @@ async def create_company(
     return new_company
 
 
-@company_router.put("/{company_id}/", summary="Update company by id")
+@company_router.put(
+    "/{company_id}/",
+    description=" `Owner` update company by id",
+    response_model=CreateCompanyReq,
+)
 async def update_company(
     company_id: int,
     company: UpdateCompanyReq,
@@ -86,7 +88,7 @@ async def update_company(
 
 @company_router.delete(
     "/{company_id}/",
-    summary="Delete company by id",
+    description="`Owner` delete company by id",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_company(
@@ -95,12 +97,12 @@ async def delete_company(
     company_service: CompanyCRUD = Depends(get_company_repository),
 ):
     await company_service.delete_company(company_id=company_id, user_id=user_id)
-    return
 
 
 @company_router.post(
-    "/change/visibility",
-    summary="Change company visibility",
+    "/change-visibility/{company_id}/",
+    status_code=status.HTTP_200_OK,
+    description="`Owner` change company visibility",
     response_model=CompanyDetailRes,
 )
 async def change_company_visibility(
@@ -117,10 +119,71 @@ async def change_company_visibility(
     return updated_company
 
 
+@company_router.post(
+    "/{company_id}/appoint-admin/{user_id}/",
+    status_code=status.HTTP_200_OK,
+    description=" `Owner` of  company to appoint administrators from the company's member list.",
+)
+async def assign_admin(
+    company_id: int,
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    service: InviteCRUD = Depends(get_invite_crud),
+):
+    return await service.owner_assign_admin(
+        company_id=company_id, target_user_id=user_id, current_user_id=current_user.id
+    )
+
+
+@company_router.post(
+    "/{company_id}/remove-admin/{user_id}/",
+    status_code=status.HTTP_200_OK,
+    description=" `Owner` of  company to remove administrators from the company's member list.",
+)
+async def remove_admin(
+    company_id: int,
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    service: InviteCRUD = Depends(get_invite_crud),
+):
+    return await service.owner_remove_admin(
+        company_id=company_id, target_user_id=user_id, current_user_id=current_user.id
+    )
+
+
+@company_router.get(
+    "/{company_id}/admins/", description="Get Admins", response_model=list[AdminRes]
+)
+async def get_admins(
+    company_id: int,
+    current_user: User = Depends(get_current_user),
+    service: InviteCRUD = Depends(get_invite_crud),
+):
+    return await service.owner_get_admins(
+        company_id=company_id, current_user_id=current_user.id
+    )
+
+
 @company_router.delete(
-    "/{company_id}/user/{user_id}/",
+    "/user-leave/{company_id}/",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Owner removes a user from the company",
+    description="`User` leaves the company.",
+)
+async def user_leave_company(
+    company_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    invite_service: InviteCRUD = Depends(get_invite_crud),
+):
+    await invite_service.user_leave_company(
+        company_id=company_id, current_user_id=current_user_id
+    )
+
+
+@company_router.delete(
+    "/owner-remove/{company_id}/user/{user_id}/",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="The owner removes a user from the company",
+    description="The company `owner` removes a user from the company.",
 )
 async def remove_user_from_company(
     company_id: int,
@@ -129,33 +192,5 @@ async def remove_user_from_company(
     invite_service: InviteCRUD = Depends(get_invite_crud),
 ):
     await invite_service.owner_remove_user(
-        company_id=company_id, user_id=user_id, current_user_id=current_user_id
-    )
-
-
-async def company_not_found_by_id(_: Request, exc: CompanyNotFoundByID):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_404_NOT_FOUND,
-    )
-
-
-async def company_permission_handler(_: Request, exc: UnauthorizedCompanyAccess):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_403_FORBIDDEN,
-    )
-
-
-async def company_already_exists_handler(_: Request, exc: CompanyAlreadyExist):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_409_CONFLICT,
-    )
-
-
-async def company_status_not_valid_handler(_: Request, exc: CompanyStatusNotValid):
-    return JSONResponse(
-        content={"details": exc.detail},
-        status_code=status.HTTP_400_BAD_REQUEST,
+        company_id=company_id, target_user_id=user_id, current_user_id=current_user_id
     )

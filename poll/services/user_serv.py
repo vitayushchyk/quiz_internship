@@ -3,8 +3,8 @@ import jwt
 from poll.db.model_users import UniqueViolation, User, UserRepository
 from poll.schemas.user_schemas import SignUpReq, TokenData, UserUpdateRes
 from poll.services.auth_serv import decode_token
-from poll.services.exc.auth_exc import JWTTokenInvalid
-from poll.services.exc.user_exc import (
+from poll.services.exc.base_exc import (
+    JWTTokenInvalid,
     UserAlreadyExist,
     UserForbidden,
     UserNotAuthenticated,
@@ -70,4 +70,6 @@ class UserCRUD:
         except (jwt.exceptions.DecodeError, jwt.exceptions.ExpiredSignatureError) as e:
             raise JWTTokenInvalid from e
         user = await self.user_repository.get_user_by_id(token_data.user_id)
+        if user is None:
+            raise UserNotFound(token_data.user_id)
         return user
