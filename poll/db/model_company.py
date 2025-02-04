@@ -75,6 +75,7 @@ class Company(Base):
     company_user_roles = relationship(
         "CompanyUserRole", back_populates="company", cascade="all, delete"
     )
+    quizzes = relationship("Quiz", back_populates="company", cascade="all, delete")
 
 
 class CompanyUserRole(Base):

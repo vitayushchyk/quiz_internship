@@ -6,10 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from poll.db.connection import get_async_session
 from poll.db.model_company import CompanyRepository
 from poll.db.model_invite import InviteRepository
+from poll.db.model_quiz import QuizRepository
 from poll.db.model_users import User, UserRepository
 from poll.schemas.user_schemas import oauth2_scheme
 from poll.services.invite_serv import InviteCRUD
 from poll.services.password_hasher import PasswordHasher
+from poll.services.quiz_serv import QuizCRUD
 from poll.services.user_serv import UserCRUD
 
 
@@ -61,3 +63,17 @@ async def get_invite_crud(
     company_repository: CompanyRepository = Depends(get_company_repository),
 ) -> AsyncGenerator[InviteCRUD, None]:
     yield InviteCRUD(invite_repository, user_repository, company_repository)
+
+
+async def get_quiz_repository(
+    session: AsyncSession = Depends(get_async_session),
+) -> AsyncGenerator[QuizRepository, None]:
+    yield QuizRepository(session)
+
+
+async def get_quiz_crud(
+    quiz_repository: QuizRepository = Depends(get_quiz_repository),
+    company_repository: CompanyRepository = Depends(get_company_repository),
+    user_repository: UserRepository = Depends(get_user_repository),
+) -> AsyncGenerator[QuizCRUD, None]:
+    yield QuizCRUD(quiz_repository, company_repository, user_repository)
