@@ -168,3 +168,41 @@ class UserRemovedFromAdminRole(MeduzzenBaseHttpException):
             status_code=200,
             detail=f"User with ID {user_id} has been removed from the admin role.",
         )
+
+
+class QuizErrors(MeduzzenBaseHttpException):
+    def __init__(self):
+        super().__init__(
+            status_code=400,
+            detail=f"Quiz must have at least two questions.",
+        )
+
+
+class QuizFoundError(MeduzzenBaseHttpException):
+    def __init__(self, quiz_id: int):
+        super().__init__(status_code=404, detail=f"Quiz with ID {quiz_id} not found!")
+
+
+class QuizTooFewQuestionsError(MeduzzenBaseHttpException):
+    def __init__(self):
+        super().__init__(
+            status_code=400, detail="Quiz must have at least two questions."
+        )
+
+
+class QuestionNoCorrectOptionError(MeduzzenBaseHttpException):
+    def __init__(
+        self,
+    ):
+        super().__init__(
+            status_code=400,
+            detail=f"Each question must have at least one correct answer.",
+        )
+
+
+class InvalidAnswerError(MeduzzenBaseHttpException):
+    def __init__(self):
+        super().__init__(
+            status_code=400,
+            detail=f"Number of answers does not match number of questions.",
+        )

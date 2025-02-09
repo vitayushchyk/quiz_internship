@@ -8,6 +8,7 @@ from poll.routers.auth_routers import router_auth
 from poll.routers.company_routers import company_router
 from poll.routers.health_check_routers import health_check_router
 from poll.routers.invite_routers import invite_router
+from poll.routers.quiz_routers import quiz_router
 from poll.routers.user_routers import user_router
 
 logging.basicConfig()
@@ -34,3 +35,5 @@ app.include_router(user_router)
 app.include_router(router_auth)
 app.include_router(company_router)
 app.include_router(invite_router)
+
+app.include_router(quiz_router)

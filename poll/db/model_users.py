@@ -16,9 +16,10 @@ from sqlalchemy import (
 )
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from poll.db.connection import Base
+from poll.db.model_quiz import QuizStat
 from poll.schemas.user_schemas import SignUpReq, UserUpdateRes
 from poll.services.pagination import Pagination
 
@@ -43,6 +44,9 @@ class User(Base):
     )
     role_in_companies = relationship(
         "CompanyUserRole", back_populates="user", cascade="all, delete-orphan"
+    )
+    quiz_stats: Mapped[list["QuizStat"]] = relationship(
+        "QuizStat", back_populates="user", cascade="all, delete-orphan"
     )
 
 
