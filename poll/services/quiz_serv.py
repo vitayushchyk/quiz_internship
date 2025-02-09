@@ -1,10 +1,6 @@
 from poll.db.model_company import CompanyRole
-from poll.db.model_quiz import QuizStatus
-from poll.schemas.quiz_shemas import (
-    AttemptQuizRequest,
-    AttemptQuizResult,
-    CreateQuizRequest,
-)
+from poll.db.model_quiz import Quiz, QuizStatus
+from poll.schemas.quiz_shemas import AttemptQuizRequest, CreateQuizReq, QuizResult
 from poll.services.exc.base_exc import (
     InvalidAnswerError,
     PermissionDeniedError,
@@ -29,11 +25,13 @@ class QuizCRUD:
         self,
         company_id: int,
         user_id: int,
-        quiz_data: CreateQuizRequest,
+        quiz_data: CreateQuizReq,
     ):
 
         await self._check_permissions(
-            company_id, user_id, [CompanyRole.OWNER, CompanyRole.ADMIN]
+            company_id=company_id,
+            user_id=user_id,
+            required_roles=[CompanyRole.OWNER, CompanyRole.ADMIN],
         )
 
         quiz = await self.quiz_repo.add_quiz(
@@ -58,9 +56,7 @@ class QuizCRUD:
 
         return quiz
 
-    async def editing_quiz(
-        self, quiz_id: int, user_id: int, title: str, description: str
-    ):
+    async def editing_quiz_title(self, quiz_id: int, user_id: int, title: str):
         quiz = await self.quiz_repo.get_quiz(quiz_id)
         if not quiz:
             raise QuizFoundError(quiz_id=quiz_id)
@@ -69,7 +65,7 @@ class QuizCRUD:
             quiz.company_id, user_id, [CompanyRole.OWNER, CompanyRole.ADMIN]
         )
 
-        updated_quiz = await self.quiz_repo.update_quiz_fields(quiz, title, description)
+        updated_quiz = await self.quiz_repo.update_quiz_title(quiz=quiz, title=title)
         return updated_quiz
 
     async def adding_new_quiz_status(self, quiz_id: int, status: str, user_id: int):
@@ -130,17 +126,24 @@ class QuizCRUD:
 
         total_questions = len(quiz.questions)
         score = (correct_questions / total_questions) * 100
-        passed = correct_questions == total_questions
-
         await self.quiz_repo.save_quiz_attempt(
             quiz=data.quiz_id,
             user_id=user_id,
             correct_answer=correct_questions,
             total_questions=total_questions,
         )
+        await self.quiz_repo.update_last_attempt_time(
+            user_id=user_id, quiz_id=data.quiz_id
+        )
 
-        return AttemptQuizResult(
+        return QuizResult(
             score=score,
             correct_answers=correct_questions,
-            total_questions=total_questions,
+            total_questions=Quiz,
         )
+
+    async def get_quiz_by_id(self, quiz_id: int):
+        quiz = await self.quiz_repo.get_quiz(quiz_id)
+        if not quiz:
+            raise QuizFoundError(quiz_id=quiz_id)
+        return quiz

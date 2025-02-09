@@ -9,16 +9,27 @@ from poll.services.exc.base_exc import (
 )
 
 
-class OptionData(BaseModel):
+class BaseOptionData(BaseModel):
     text: str
-    is_correct: bool
 
     class Config:
         orm_mode = True
 
 
-class QuestionData(BaseModel):
+class OptionData(BaseOptionData):
+    is_correct: bool
+
+
+class PublicOptionData(BaseOptionData):
+    pass
+
+
+class BaseQuestionData(BaseModel):
     title: str
+    options: List[BaseOptionData]
+
+
+class QuestionData(BaseQuestionData):
     options: List[OptionData]
 
     @field_validator("options")
@@ -30,22 +41,39 @@ class QuestionData(BaseModel):
         return options
 
 
-class CreateQuizRequest(BaseModel):
-    title: str
-    description: str
-    questions_data: list[QuestionData]
+class PublicQuestionData(BaseQuestionData):
+    options: List[PublicOptionData]
 
 
-class QuizRes(BaseModel):
+class BaseQuizRes(BaseModel):
     id: int
     title: str
     description: str
-    questions: list[QuestionData]
     company_id: int
     creator_id: int
 
-    class Config:
-        orm_mode = True
+
+class QuizRes(BaseQuizRes):
+    questions: List[QuestionData]
+
+
+class PublicQuizRes(BaseQuizRes):
+    questions: List[PublicQuestionData]
+
+
+class CreateQuizReq(BaseModel):
+    title: str
+    description: str
+    questions_data: List[QuestionData]
+
+
+class UpdateQuizReq(BaseModel):
+    new_title: str
+
+
+class UpdateQuizRes(BaseModel):
+    id: int
+    new_title: str
 
 
 class QuizStatusRes(BaseModel):
@@ -67,7 +95,11 @@ class AttemptQuizRequest(BaseModel):
     answers: List[AttemptAnswer]
 
 
-class AttemptQuizResult(BaseModel):
+class QuizResult(BaseModel):
     score: float
     correct_answers: int
     total_questions: int
+
+
+class AverageScoreRes(BaseModel):
+    average_score: float

@@ -154,30 +154,6 @@ class InvalidEmailError(MeduzzenBaseHttpException):
         )
 
 
-class UserSuccessfullyAssignedAdmin(MeduzzenBaseHttpException):
-    def __init__(self, user_id: int):
-        super().__init__(
-            status_code=200,
-            detail=f"User with ID {user_id} has been assigned as an admin.",
-        )
-
-
-class UserRemovedFromAdminRole(MeduzzenBaseHttpException):
-    def __init__(self, user_id: int):
-        super().__init__(
-            status_code=200,
-            detail=f"User with ID {user_id} has been removed from the admin role.",
-        )
-
-
-class QuizErrors(MeduzzenBaseHttpException):
-    def __init__(self):
-        super().__init__(
-            status_code=400,
-            detail=f"Quiz must have at least two questions.",
-        )
-
-
 class QuizFoundError(MeduzzenBaseHttpException):
     def __init__(self, quiz_id: int):
         super().__init__(status_code=404, detail=f"Quiz with ID {quiz_id} not found!")

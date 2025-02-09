@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, status
 
@@ -7,23 +7,30 @@ from poll.db.model_quiz import QuizStatus
 from poll.db.model_users import User
 from poll.schemas.quiz_shemas import (
     AttemptQuizRequest,
-    AttemptQuizResult,
-    CreateQuizRequest,
+    AverageScoreRes,
+    CreateQuizReq,
+    PublicOptionData,
+    PublicQuestionData,
+    PublicQuizRes,
     QuizRes,
     QuizStatusRes,
+    UpdateQuizReq,
+    UpdateQuizRes,
 )
-from poll.services.exc.base_exc import QuizFoundError
 from poll.services.quiz_serv import QuizCRUD
 
 quiz_router = APIRouter(prefix="/quiz", tags=["Quiz"])
 
 
 @quiz_router.post(
-    "/create_quiz/", status_code=status.HTTP_201_CREATED, response_model=QuizRes
+    "/create_quiz/",
+    response_model=QuizRes,
+    description="`Owner/Admin` create quiz",
+    status_code=status.HTTP_201_CREATED,
 )
 async def create_quiz(
     company_id: int,
-    data: CreateQuizRequest,
+    data: CreateQuizReq,
     current_user_id: int = Depends(get_current_user_id),
     quiz_crud: QuizCRUD = Depends(get_quiz_crud),
 ):
@@ -43,33 +50,23 @@ async def create_quiz(
 
 
 @quiz_router.put(
-    "/{quiz_id}/",
-    response_model=QuizRes,
-    description="`Owner/Admin` create quiz",
+    "/{quiz_id}/quiz-title/",
+    response_model=UpdateQuizRes,
+    description="`Owner/Admin` update quiz title",
     status_code=status.HTTP_200_OK,
 )
-async def edit_quiz(
+async def update_quiz(
     quiz_id: int,
-    data: CreateQuizRequest,
+    title_req: UpdateQuizReq,
     current_user_id: int = Depends(get_current_user_id),
     quiz_service: "QuizCRUD" = Depends(get_quiz_crud),
 ):
-    try:
-        quiz = await quiz_service.editing_quiz(
-            quiz_id=quiz_id,
-            user_id=current_user_id,
-            title=data.title,
-            description=data.description,
-        )
-        return QuizRes(
-            id=quiz.id,
-            title=quiz.title,
-            description=quiz.description,
-            company_id=quiz.company_id,
-            creator_id=quiz.created_by,
-        )
-    except QuizFoundError:
-        raise QuizFoundError(quiz_id=quiz_id)
+    new_title = title_req.new_title
+    updated_quiz = await quiz_service.editing_quiz_title(
+        quiz_id=quiz_id, user_id=current_user_id, title=new_title
+    )
+
+    return UpdateQuizRes(id=updated_quiz.id, new_title=updated_quiz.title)
 
 
 @quiz_router.put(
@@ -97,10 +94,10 @@ async def update_quiz_status(
     )
 
 
-@quiz_router.post(
-    "/",
+@quiz_router.get(
+    "/by-status/",
     response_model=List[QuizStatusRes],
-    description="`Owner/Admin` can change quiz status ",
+    description="Get all quiz's by status ",
     status_code=status.HTTP_200_OK,
 )
 async def get_quizzes_by_status(
@@ -139,7 +136,7 @@ async def delete_quiz(
 
 @quiz_router.post(
     "/take/",
-    response_model=AttemptQuizResult,
+    response_model=AttemptQuizRequest,
     description="Users to take quiz",
     status_code=status.HTTP_200_OK,
 )
@@ -152,3 +149,55 @@ async def take_quiz(
         user_id=current_user.id, data=attempt_data
     )
     return attempt_results
+
+
+@quiz_router.get(
+    "/average-score/",
+    description="Get average quiz score for user or system-wide",
+    status_code=status.HTTP_200_OK,
+    response_model=AverageScoreRes,
+)
+async def get_average_score(
+    user_id: int = Depends(get_current_user_id),
+    company_id: Optional[int] = None,
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+):
+    if company_id:
+        avg_score = await quiz_crud.quiz_repo.get_avg_score(
+            user_id=user_id, company_id=company_id
+        )
+    else:
+        avg_score = await quiz_crud.quiz_repo.get_system_avg_score()
+    return AverageScoreRes(avg_score=avg_score)
+
+
+@quiz_router.get(
+    "/{quiz_id}",
+    description="Get all quiz's by id",
+    status_code=status.HTTP_200_OK,
+    response_model=PublicQuizRes,
+)
+async def get_quiz_by_id(
+    quiz_id: int,
+    quiz_service: QuizCRUD = Depends(get_quiz_crud),
+):
+    quiz = await quiz_service.get_quiz_by_id(quiz_id=quiz_id)
+
+    questions = []
+    for question in quiz.questions:
+        question_data = PublicQuestionData(
+            title=question.title,
+            options=[
+                PublicOptionData(text=option.option_text) for option in question.options
+            ],
+        )
+        questions.append(question_data)
+
+    return PublicQuizRes(
+        id=quiz.id,
+        title=quiz.title,
+        description=quiz.description,
+        questions=questions,
+        company_id=quiz.company_id,
+        creator_id=quiz.created_by,
+    )
