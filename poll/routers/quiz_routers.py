@@ -1,8 +1,10 @@
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, status
+from redis.asyncio import Redis
 
 from poll.core.deps import get_current_user, get_current_user_id, get_quiz_crud
+from poll.db.connection import get_redis_client
 from poll.db.model_quiz import QuizStatus
 from poll.db.model_users import User
 from poll.schemas.quiz_shemas import (
@@ -13,6 +15,7 @@ from poll.schemas.quiz_shemas import (
     PublicQuestionData,
     PublicQuizRes,
     QuizRes,
+    QuizResult,
     QuizStatusRes,
     UpdateQuizReq,
     UpdateQuizRes,
@@ -136,17 +139,18 @@ async def delete_quiz(
 
 @quiz_router.post(
     "/take/",
-    response_model=AttemptQuizRequest,
+    response_model=QuizResult,
     description="Users to take quiz",
     status_code=status.HTTP_200_OK,
 )
 async def take_quiz(
     attempt_data: AttemptQuizRequest,
     quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+    redis: Redis = Depends(get_redis_client),
     current_user: User = Depends(get_current_user),
 ):
     attempt_results = await quiz_crud.take_quiz(
-        user_id=current_user.id, data=attempt_data
+        user_id=current_user.id, data=attempt_data, redis=redis
     )
     return attempt_results
 

@@ -2,7 +2,7 @@ import logging
 from urllib.parse import quote
 
 from fastapi import HTTPException
-from pydantic import PostgresDsn, SecretStr
+from pydantic import PostgresDsn, RedisDsn, SecretStr
 from pydantic_settings import BaseSettings
 
 
@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     db_host: str = "db"
     echo_query: bool = True
     db_port: int = 5432
+
+    redis_host: str = "redis"
+    redis_port: int = 6379
+    redis_db: int = 0
+    redis_password: SecretStr | None = None
 
     cors_origins: list[str] = ["*"]
     cors_allow_credentials: bool = True
@@ -41,6 +46,22 @@ class Settings(BaseSettings):
             password=quote(self.postgres_password.get_secret_value()),
         )
         # type: ignore[union-attr]
+
+    @property
+    def redis_connection_uri(self) -> str | None:
+        return str(
+            RedisDsn.build(
+                scheme="redis",
+                host=self.redis_host,
+                port=self.redis_port,
+                password=(
+                    self.redis_password.get_secret_value()
+                    if self.redis_password
+                    else None
+                ),
+                path=f"/{self.redis_db}",
+            )
+        )
 
     def get_log_level(self) -> int:
         return {

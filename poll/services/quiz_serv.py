@@ -1,6 +1,16 @@
+import json
+from datetime import timedelta
+
+from redis.asyncio import Redis
+
 from poll.db.model_company import CompanyRole
-from poll.db.model_quiz import Quiz, QuizStatus
-from poll.schemas.quiz_shemas import AttemptQuizRequest, CreateQuizReq, QuizResult
+from poll.db.model_quiz import QuizStatus
+from poll.schemas.quiz_shemas import (
+    AttemptAnswer,
+    AttemptQuizRequest,
+    CreateQuizReq,
+    QuizResult,
+)
 from poll.services.exc.base_exc import (
     InvalidAnswerError,
     PermissionDeniedError,
@@ -9,7 +19,12 @@ from poll.services.exc.base_exc import (
 
 
 class QuizCRUD:
-    def __init__(self, quiz_repo, company_repo, user_repo):
+    def __init__(
+        self,
+        quiz_repo,
+        company_repo,
+        user_repo,
+    ):
         self.quiz_repo = quiz_repo
         self.company_repo = company_repo
         self.user_repo = user_repo
@@ -99,7 +114,7 @@ class QuizCRUD:
         await self.quiz_repo.delete_quiz(quiz_id=quiz_id)
         return None
 
-    async def take_quiz(self, user_id: int, data: AttemptQuizRequest):
+    async def take_quiz(self, user_id: int, data: AttemptQuizRequest, redis: Redis):
         quiz = await self.quiz_repo.get_quiz(data.quiz_id)
         if not quiz:
             raise QuizFoundError(quiz_id=data.quiz_id)
@@ -108,6 +123,9 @@ class QuizCRUD:
             raise InvalidAnswerError()
 
         correct_questions = 0
+
+        quiz_answers = []
+        validated_answers = []
 
         for user_answer in data.answers:
 
@@ -121,11 +139,30 @@ class QuizCRUD:
                 (option for option in question.options if option.is_correct), None
             )
 
-            if correct_option and user_answer.option_id == correct_option.id:
+            is_correct = correct_option and user_answer.option_id == correct_option.id
+            if is_correct:
                 correct_questions += 1
+
+            quiz_answers.append(
+                {
+                    "question_id": user_answer.question_id,
+                    "user_id": user_id,
+                    "quiz_id": data.quiz_id,
+                    "company_id": quiz.company_id,
+                    "user_answer": user_answer.option_id,
+                    "is_correct": is_correct,
+                }
+            )
+
+            validated_answers.append(
+                AttemptAnswer(
+                    question_id=user_answer.question_id, option_id=user_answer.option_id
+                )
+            )
 
         total_questions = len(quiz.questions)
         score = (correct_questions / total_questions) * 100
+
         await self.quiz_repo.save_quiz_attempt(
             quiz=data.quiz_id,
             user_id=user_id,
@@ -136,10 +173,15 @@ class QuizCRUD:
             user_id=user_id, quiz_id=data.quiz_id
         )
 
+        redis_key = f"quiz:{data.quiz_id}:user:{user_id}"
+        await redis.set(redis_key, json.dumps(quiz_answers), ex=timedelta(hours=48))
+
         return QuizResult(
+            quiz_id=data.quiz_id,
+            answers=validated_answers,
             score=score,
             correct_answers=correct_questions,
-            total_questions=Quiz,
+            total_questions=len(quiz.questions),
         )
 
     async def get_quiz_by_id(self, quiz_id: int):

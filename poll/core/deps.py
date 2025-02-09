@@ -1,9 +1,10 @@
-from typing import Annotated, AsyncGenerator
+from typing import Annotated, Any, AsyncGenerator
 
 from fastapi import Depends
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from poll.db.connection import get_async_session
+from poll.db.connection import RedisDependency, get_async_session
 from poll.db.model_company import CompanyRepository
 from poll.db.model_invite import InviteRepository
 from poll.db.model_quiz import QuizRepository
@@ -69,6 +70,10 @@ async def get_quiz_repository(
     session: AsyncSession = Depends(get_async_session),
 ) -> AsyncGenerator[QuizRepository, None]:
     yield QuizRepository(session)
+
+
+async def get_redis_client() -> AsyncGenerator[Any, Any]:
+    yield RedisDependency()
 
 
 async def get_quiz_crud(
