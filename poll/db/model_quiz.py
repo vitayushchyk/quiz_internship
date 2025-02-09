@@ -203,15 +203,14 @@ class QuizRepository:
         result = await self.session.execute(query)
         return result.scalar()
 
-    async def update_quiz_fields(
-        self, quiz: Quiz, title: str, description: str
+    async def update_quiz_title(
+        self,
+        quiz: Quiz,
+        title: str,
     ) -> Quiz:
-        logger.info(
-            f"Updating quiz id={quiz.id}. New Title: {title}, New Description: {description}"
-        )
+        logger.info(f"Updating quiz id={quiz.id}. New Title: {title}")
 
         quiz.title = title
-        quiz.description = description
         await self.session.commit()
         await self.session.refresh(quiz)
         return quiz
@@ -266,15 +265,45 @@ class QuizRepository:
             correct_answers=correct_answer,
             total_questions=total_questions,
             score=score,
+            attempted_at=datetime.datetime.utcnow(),
         )
         self.session.add(quiz_statist)
         await self.session.commit()
         await self.session.refresh(quiz_statist)
         return quiz_statist
 
-    async def get_correct_answers(self, question_id: int):
-        query = select(QuestionOption).where(
-            QuestionOption.question_id == question_id, QuestionOption.is_correct == True
+    async def update_last_attempt_time(self, user_id: int, quiz_id: int):
+        logger.info(
+            f"Updating last attempt time for user_id={user_id}, quiz_id={quiz_id}"
+        )
+        query = select(QuizStat).where(
+            QuizStat.quiz_id == quiz_id, QuizStat.user_id == user_id
         )
         result = await self.session.execute(query)
-        return result.scalars().all()
+        stat = result.scalar()
+        if stat:
+            stat.attempted_at = datetime.datetime.utcnow()
+            await self.session.commit()
+
+    async def get_avg_score(
+        self, user_id: int, company_id: Optional[int] = None
+    ) -> float:
+        logger.info(
+            f"Calculating average score for user_id={user_id}, company_id={company_id}"
+        )
+        query = select(func.avg(QuizStat.score)).where(QuizStat.user_id == user_id)
+        if company_id:
+            query = query.join(Quiz, QuizStat.quiz_id == Quiz.id).where(
+                Quiz.company_id == company_id
+            )
+
+        result = await self.session.execute(query)
+        avg_score = result.scalar()
+        return avg_score if avg_score else 0.0
+
+    async def get_system_avg_score(self) -> float:
+        logger.info("Calculating system-wide average score")
+        query = select(func.avg(QuizStat.score))
+        result = await self.session.execute(query)
+        avg_score = result.scalar()
+        return avg_score if avg_score else 0.0
