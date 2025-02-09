@@ -1,6 +1,15 @@
 from poll.db.model_company import CompanyRole
 from poll.db.model_quiz import QuizStatus
-from poll.services.exc.base_exc import PermissionDeniedError, QuizErrors, QuizFoundError
+from poll.schemas.quiz_shemas import (
+    AttemptQuizRequest,
+    AttemptQuizResult,
+    CreateQuizRequest,
+)
+from poll.services.exc.base_exc import (
+    InvalidAnswerError,
+    PermissionDeniedError,
+    QuizFoundError,
+)
 
 
 class QuizCRUD:
@@ -20,39 +29,31 @@ class QuizCRUD:
         self,
         company_id: int,
         user_id: int,
-        title: str,
-        description: str,
-        questions_data: list[dict],
+        quiz_data: CreateQuizRequest,
     ):
 
         await self._check_permissions(
             company_id, user_id, [CompanyRole.OWNER, CompanyRole.ADMIN]
         )
-        if len(questions_data) < 2:
-            raise QuizErrors
+
         quiz = await self.quiz_repo.add_quiz(
             company_id=company_id,
             user_id=user_id,
-            title=title,
-            description=description,
+            title=quiz_data.title,
+            description=quiz_data.description,
         )
-        for question_data in questions_data:
-            if "options" not in question_data or len(question_data["options"]) < 2:
-                raise ValueError("Each question must have at least two answer options.")
-            if not any(option["is_correct"] for option in question_data["options"]):
-                raise ValueError(
-                    f"Question '{question_data['title']}' must have at least one correct answer."
-                )
+
+        for question_data in quiz_data.questions_data:
 
             question = await self.quiz_repo.add_question(
-                quiz.id, question_data["title"]
+                quiz_id=quiz.id, title=question_data.title
             )
 
-            for option_data in question_data["options"]:
-                await self.quiz_repo.add_question(
+            for option_data in question_data.options:
+                await self.quiz_repo.add_question_option(
                     question_id=question.id,
-                    option_text=option_data["text"],
-                    is_correct=option_data["is_correct"],
+                    option_text=option_data.text,
+                    is_correct=option_data.is_correct,
                 )
 
         return quiz
@@ -90,4 +91,56 @@ class QuizCRUD:
     ):
         return await self.quiz_repo.get_quizzes_by_status(
             status=status, page=page, page_size=page_size
+        )
+
+    async def delete_quiz(self, quiz_id: int, user_id: int):
+        quiz = await self.quiz_repo.get_quiz(quiz_id)
+        if not quiz:
+            raise QuizFoundError(quiz_id=quiz_id)
+        await self._check_permissions(
+            quiz.company_id, user_id, [CompanyRole.OWNER, CompanyRole.ADMIN]
+        )
+        await self.quiz_repo.delete_quiz(quiz_id=quiz_id)
+        return None
+
+    async def take_quiz(self, user_id: int, data: AttemptQuizRequest):
+        quiz = await self.quiz_repo.get_quiz(data.quiz_id)
+        if not quiz:
+            raise QuizFoundError(quiz_id=data.quiz_id)
+
+        if len(data.answers) != len(quiz.questions):
+            raise InvalidAnswerError()
+
+        correct_questions = 0
+
+        for user_answer in data.answers:
+
+            question = next(
+                (q for q in quiz.questions if q.id == user_answer.question_id), None
+            )
+            if not question:
+                raise InvalidAnswerError()
+
+            correct_option = next(
+                (option for option in question.options if option.is_correct), None
+            )
+
+            if correct_option and user_answer.option_id == correct_option.id:
+                correct_questions += 1
+
+        total_questions = len(quiz.questions)
+        score = (correct_questions / total_questions) * 100
+        passed = correct_questions == total_questions
+
+        await self.quiz_repo.save_quiz_attempt(
+            quiz=data.quiz_id,
+            user_id=user_id,
+            correct_answer=correct_questions,
+            total_questions=total_questions,
+        )
+
+        return AttemptQuizResult(
+            score=score,
+            correct_answers=correct_questions,
+            total_questions=total_questions,
         )

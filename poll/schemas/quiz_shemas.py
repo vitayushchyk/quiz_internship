@@ -55,3 +55,19 @@ class QuizStatusRes(BaseModel):
     title: str
     status: QuizStatus
     description: str
+
+
+class AttemptAnswer(BaseModel):
+    question_id: int
+    option_id: int
+
+
+class AttemptQuizRequest(BaseModel):
+    quiz_id: int
+    answers: List[AttemptAnswer]
+
+
+class AttemptQuizResult(BaseModel):
+    score: float
+    correct_answers: int
+    total_questions: int

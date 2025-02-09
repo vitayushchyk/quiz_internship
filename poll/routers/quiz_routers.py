@@ -2,9 +2,16 @@ from typing import List
 
 from fastapi import APIRouter, Depends, status
 
-from poll.core.deps import get_current_user_id, get_quiz_crud
+from poll.core.deps import get_current_user, get_current_user_id, get_quiz_crud
 from poll.db.model_quiz import QuizStatus
-from poll.schemas.quiz_shemas import CreateQuizRequest, QuizRes, QuizStatusRes
+from poll.db.model_users import User
+from poll.schemas.quiz_shemas import (
+    AttemptQuizRequest,
+    AttemptQuizResult,
+    CreateQuizRequest,
+    QuizRes,
+    QuizStatusRes,
+)
 from poll.services.exc.base_exc import QuizFoundError
 from poll.services.quiz_serv import QuizCRUD
 
@@ -12,7 +19,7 @@ quiz_router = APIRouter(prefix="/quiz", tags=["Quiz"])
 
 
 @quiz_router.post(
-    "/create_quiz", status_code=status.HTTP_201_CREATED, response_model=QuizRes
+    "/create_quiz/", status_code=status.HTTP_201_CREATED, response_model=QuizRes
 )
 async def create_quiz(
     company_id: int,
@@ -23,9 +30,7 @@ async def create_quiz(
     quiz = await quiz_crud.create_quiz(
         company_id=company_id,
         user_id=current_user_id,
-        title=data.title,
-        description=data.description,
-        questions_data=[q.dict() for q in data.questions_data],
+        quiz_data=data,
     )
     return QuizRes(
         id=quiz.id,
@@ -38,7 +43,7 @@ async def create_quiz(
 
 
 @quiz_router.put(
-    "/{quiz_id}",
+    "/{quiz_id}/",
     response_model=QuizRes,
     description="`Owner/Admin` create quiz",
     status_code=status.HTTP_200_OK,
@@ -68,7 +73,7 @@ async def edit_quiz(
 
 
 @quiz_router.put(
-    "/{quiz_id}/status",
+    "/{quiz_id}/change-status/",
     response_model=QuizStatusRes,
     description="`Owner/Admin` update quiz",
     status_code=status.HTTP_200_OK,
@@ -92,10 +97,10 @@ async def update_quiz_status(
     )
 
 
-@quiz_router.get(
-    "/quizzes-status",
+@quiz_router.post(
+    "/",
     response_model=List[QuizStatusRes],
-    description="`Owner/Admin` can receive quizzes by status",
+    description="`Owner/Admin` can change quiz status ",
     status_code=status.HTTP_200_OK,
 )
 async def get_quizzes_by_status(
@@ -116,3 +121,34 @@ async def get_quizzes_by_status(
         )
         for quiz in quizzes
     ]
+
+
+@quiz_router.delete(
+    "/{quiz_id}",
+    description="`Owner/Admin` delete quiz",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_quiz(
+    quiz_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    quiz_service: QuizCRUD = Depends(get_quiz_crud),
+):
+    await quiz_service.delete_quiz(quiz_id=quiz_id, user_id=current_user_id)
+    return
+
+
+@quiz_router.post(
+    "/take/",
+    response_model=AttemptQuizResult,
+    description="Users to take quiz",
+    status_code=status.HTTP_200_OK,
+)
+async def take_quiz(
+    attempt_data: AttemptQuizRequest,
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+    current_user: User = Depends(get_current_user),
+):
+    attempt_results = await quiz_crud.take_quiz(
+        user_id=current_user.id, data=attempt_data
+    )
+    return attempt_results

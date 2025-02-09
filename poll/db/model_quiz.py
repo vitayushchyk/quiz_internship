@@ -6,6 +6,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -14,6 +15,7 @@ from sqlalchemy import (
     select,
 )
 from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, relationship, selectinload
 
 from poll.db.connection import Base
@@ -125,14 +127,17 @@ class QuizStat(Base):
     attempted_at: datetime.datetime = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    correct_answers: int = Column(Integer, default=0, nullable=False)
+    total_questions: int = Column(Integer, default=0, nullable=False)
+    score: float = Column(Float, default=0.0, nullable=False)
 
     quiz: Mapped["Quiz"] = relationship("Quiz", back_populates="stats")
-
     user = relationship("User", back_populates="quiz_stats")
 
 
 class QuizRepository:
-    def __init__(self, session):
+
+    def __init__(self, session: AsyncSession):
         self.session = session
 
     async def add_quiz(
@@ -158,7 +163,19 @@ class QuizRepository:
         await self.session.refresh(new_quiz)
         return new_quiz
 
-    async def add_question(
+    async def add_question(self, quiz_id: int, title: str) -> Question:
+        logger.info(f"Adding a new question to quiz_id={quiz_id}. Title: '{title}'")
+
+        new_question = Question(
+            quiz_id=quiz_id,
+            title=title,
+        )
+        self.session.add(new_question)
+        await self.session.commit()
+        await self.session.refresh(new_question)
+        return new_question
+
+    async def add_question_option(
         self, question_id: int, option_text: str, is_correct: bool = False
     ) -> QuestionOption:
         logger.info(
@@ -169,14 +186,19 @@ class QuizRepository:
             question_id=question_id, option_text=option_text, is_correct=is_correct
         )
         self.session.add(new_question_option)
+
         await self.session.commit()
+
         await self.session.refresh(new_question_option)
+
         return new_question_option
 
     async def get_quiz(self, quiz_id: int) -> Quiz:
         logger.info(f"Fetching quiz by ID: {quiz_id}")
         query = (
-            select(Quiz).options(selectinload(Quiz.questions)).where(Quiz.id == quiz_id)
+            select(Quiz)
+            .options(selectinload(Quiz.questions).selectinload(Question.options))
+            .where(Quiz.id == quiz_id)
         )
         result = await self.session.execute(query)
         return result.scalar()
@@ -221,3 +243,38 @@ class QuizRepository:
         )
         pagination = Pagination(self.session, query, page, page_size)
         return await pagination.fetch_results()
+
+    async def delete_quiz(self, quiz_id: int) -> None:
+        logger.info(f"Deleting quiz {quiz_id}")
+        result = await self.session.execute(select(Quiz).where(Quiz.id == quiz_id))
+        quiz = result.scalar()
+        if quiz:
+            await self.session.delete(quiz)
+            await self.session.commit()
+        return None
+
+    async def save_quiz_attempt(
+        self, quiz: int, user_id: int, correct_answer: int, total_questions: int
+    ):
+        logger.info(
+            f"Saving quiz attempt for quiz={quiz}, user_id={user_id}, correct_answer={correct_answer}, total_questions={total_questions},"
+        )
+        score = correct_answer / total_questions if total_questions > 0 else 0
+        quiz_statist = QuizStat(
+            quiz_id=quiz,
+            user_id=user_id,
+            correct_answers=correct_answer,
+            total_questions=total_questions,
+            score=score,
+        )
+        self.session.add(quiz_statist)
+        await self.session.commit()
+        await self.session.refresh(quiz_statist)
+        return quiz_statist
+
+    async def get_correct_answers(self, question_id: int):
+        query = select(QuestionOption).where(
+            QuestionOption.question_id == question_id, QuestionOption.is_correct == True
+        )
+        result = await self.session.execute(query)
+        return result.scalars().all()

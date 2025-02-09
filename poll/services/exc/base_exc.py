@@ -190,14 +190,6 @@ class QuizTooFewQuestionsError(MeduzzenBaseHttpException):
         )
 
 
-class QuestionTooFewOptionsError(MeduzzenBaseHttpException):
-    def __init__(self, question_title: str):
-        super().__init__(
-            status_code=400,
-            detail=f"Question '{question_title}' must have at least two answer options.",
-        )
-
-
 class QuestionNoCorrectOptionError(MeduzzenBaseHttpException):
     def __init__(
         self,
@@ -205,4 +197,12 @@ class QuestionNoCorrectOptionError(MeduzzenBaseHttpException):
         super().__init__(
             status_code=400,
             detail=f"Each question must have at least one correct answer.",
+        )
+
+
+class InvalidAnswerError(MeduzzenBaseHttpException):
+    def __init__(self):
+        super().__init__(
+            status_code=400,
+            detail=f"Number of answers does not match number of questions.",
         )
