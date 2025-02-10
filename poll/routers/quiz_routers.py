@@ -205,3 +205,62 @@ async def get_quiz_by_id(
         company_id=quiz.company_id,
         creator_id=quiz.created_by,
     )
+
+
+@quiz_router.get(
+    "/{user_id}/results/",
+    description="`Current user` retrieve the quiz-test results ",
+    status_code=status.HTTP_200_OK,
+)
+async def get_user_quiz_results(
+    user_id: int,
+    page: int = 1,
+    page_size: int = 10,
+    current_user: User = Depends(get_current_user),
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+):
+    return await quiz_crud.get_user_results(
+        user_id=user_id, current_user=current_user.id, page=page, page_size=page_size
+    )
+
+
+@quiz_router.get(
+    "/{company_id}/results/",
+    description="`Owner/Admin` get the quiz results for a company.",
+    status_code=status.HTTP_200_OK,
+)
+async def get_company_quiz_results(
+    company_id: int,
+    page: int = 1,
+    page_size: int = 10,
+    current_user: User = Depends(get_current_user),
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+):
+    return await quiz_crud.get_company_results(
+        company_id=company_id,
+        user_id=current_user.id,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@quiz_router.get(
+    "/companies/{company_id}/users/{user_id}/results",
+    description="`Owner/Admin` retrieve quiz-test results for a specific user in the specified company",
+    status_code=status.HTTP_200_OK,
+)
+async def get_user_results_in_company(
+    company_id: int,
+    user_id: int,
+    page: int = 1,
+    page_size: int = 10,
+    current_user: User = Depends(get_current_user),
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+):
+    return await quiz_crud.get_user_results_in_company(
+        company_id=company_id,
+        admin_user_id=current_user.id,
+        user_id=user_id,
+        page=page,
+        page_size=page_size,
+    )

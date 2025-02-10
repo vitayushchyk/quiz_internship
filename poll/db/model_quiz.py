@@ -307,3 +307,21 @@ class QuizRepository:
         result = await self.session.execute(query)
         avg_score = result.scalar()
         return avg_score if avg_score else 0.0
+
+    async def get_user_quiz_stats(
+        self,
+        user_id: int,
+        company_id: Optional[int] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ):
+        logger.info(
+            f"Fetching quiz stats for user_id={user_id}, company_id={company_id}. Page: {page}, Page Size: {page_size}"
+        )
+        query = select(QuizStat).where(QuizStat.user_id == user_id)
+        if company_id:
+            query = query.join(Quiz, QuizStat.quiz_id == Quiz.id).where(
+                Quiz.company_id == company_id
+            )
+        pagination = Pagination(self.session, query, page, page_size)
+        return await pagination.fetch_results()
