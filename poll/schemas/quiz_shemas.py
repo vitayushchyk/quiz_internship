@@ -96,6 +96,8 @@ class AttemptQuizRequest(BaseModel):
 
 
 class QuizResult(BaseModel):
+    quiz_id: int
+    answers: List[AttemptAnswer]
     score: float
     correct_answers: int
     total_questions: int
