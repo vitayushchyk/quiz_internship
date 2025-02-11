@@ -232,3 +232,21 @@ class QuizCRUD:
         if not get_stat:
             raise ResultNotFound()
         return get_stat
+
+    async def get_results_for_quiz(
+        self,
+        quiz_id: int,
+        user_id: int,
+        current_user: int,
+        page: int = 1,
+        page_size: int = 10,
+    ):
+        quiz = await self.quiz_repo.get_quiz(quiz_id)
+        if quiz is None:
+            raise QuizFoundError(quiz_id=quiz_id)
+        if user_id != current_user:
+            raise GeneralPermissionError
+
+        return await self.quiz_repo.get_results_for_quiz_d(
+            quiz_id=quiz_id, user_id=user_id, page=page, page_size=page_size
+        )

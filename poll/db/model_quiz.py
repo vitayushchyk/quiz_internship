@@ -325,3 +325,23 @@ class QuizRepository:
             )
         pagination = Pagination(self.session, query, page, page_size)
         return await pagination.fetch_results()
+
+    async def get_results_for_quiz_d(
+        self, quiz_id: int, user_id: int = None, page: int = 1, page_size: int = 10
+    ):
+        query = select(QuizStat).where(QuizStat.quiz_id == quiz_id)
+        if user_id:
+            query = query.where(QuizStat.user_id == user_id)
+
+        query = query.limit(page_size).offset((page - 1) * page_size)
+
+        results = await self.session.execute(query)
+        return [
+            {
+                "user_id": result.user_id,
+                "score": result.score,
+                "attempts": result.total_questions,
+                "completed_at": result.attempted_at.isoformat(),
+            }
+            for result in results.scalars()
+        ]
