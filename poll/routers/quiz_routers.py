@@ -1,7 +1,10 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
+from pydantic import parse_obj_as
 from redis.asyncio import Redis
+from starlette.responses import StreamingResponse
 
 from poll.core.deps import get_current_user, get_current_user_id, get_quiz_crud
 from poll.db.connection import get_redis_client
@@ -14,9 +17,12 @@ from poll.schemas.quiz_shemas import (
     PublicOptionData,
     PublicQuestionData,
     PublicQuizRes,
+    QuizExportResultJSON,
+    QuizExportResults,
     QuizRes,
     QuizResult,
     QuizStatusRes,
+    ResponseFormat,
     UpdateQuizReq,
     UpdateQuizRes,
 )
@@ -172,7 +178,7 @@ async def get_average_score(
         )
     else:
         avg_score = await quiz_crud.quiz_repo.get_system_avg_score()
-    return AverageScoreRes(avg_score=avg_score)
+    return AverageScoreRes(average_score=avg_score)
 
 
 @quiz_router.get(
@@ -205,3 +211,103 @@ async def get_quiz_by_id(
         company_id=quiz.company_id,
         creator_id=quiz.created_by,
     )
+
+
+@quiz_router.get(
+    "/{user_id}/results/",
+    description="`Current user` retrieve the quiz-test results ",
+    status_code=status.HTTP_200_OK,
+)
+async def get_user_quiz_results(
+    user_id: int,
+    page: int = 1,
+    page_size: int = 10,
+    current_user: User = Depends(get_current_user),
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+):
+    return await quiz_crud.get_user_results(
+        user_id=user_id, current_user=current_user.id, page=page, page_size=page_size
+    )
+
+
+@quiz_router.get(
+    "/{company_id}/results/",
+    description="`Owner/Admin` get the quiz results for a company.",
+    status_code=status.HTTP_200_OK,
+)
+async def get_company_quiz_results(
+    company_id: int,
+    page: int = 1,
+    page_size: int = 10,
+    current_user: User = Depends(get_current_user),
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+):
+    return await quiz_crud.get_company_results(
+        company_id=company_id,
+        user_id=current_user.id,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@quiz_router.get(
+    "/companies/{company_id}/users/{user_id}/results",
+    description="`Owner/Admin` retrieve quiz-test results for a specific user in the specified company",
+    status_code=status.HTTP_200_OK,
+)
+async def get_user_results_in_company(
+    company_id: int,
+    user_id: int,
+    page: int = 1,
+    page_size: int = 10,
+    current_user: User = Depends(get_current_user),
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+):
+    return await quiz_crud.get_user_results_in_company(
+        company_id=company_id,
+        admin_user_id=current_user.id,
+        user_id=user_id,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@quiz_router.get(
+    "/{quiz_id}/export-results/",
+    description="`Owner/Admin` export results of a specific quiz to CSV or JSON format",
+    status_code=status.HTTP_200_OK,
+)
+async def export_quiz_results(
+    quiz_id: int,
+    response_format: ResponseFormat = ResponseFormat.csv,
+    current_user: User = Depends(get_current_user),
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+):
+
+    results = await quiz_crud.get_results_for_quiz(
+        quiz_id=quiz_id,
+        user_id=current_user.id,
+        current_user=current_user.id,
+    )
+
+    structured_results = QuizExportResults(
+        results=parse_obj_as(List[QuizExportResultJSON], results)
+    )
+
+    if response_format == ResponseFormat.json:
+        return JSONResponse(content=structured_results.dict())
+
+    elif response_format == ResponseFormat.csv:
+
+        def generate_csv():
+            yield "user_id,score,attempts,completed_at\n"
+            for result in structured_results.results:
+                yield f"{result.user_id},{result.score},{result.attempts},{result.completed_at}\n"
+
+        return StreamingResponse(
+            generate_csv(),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f"attachment; filename=quiz_{quiz_id}_results.csv"
+            },
+        )

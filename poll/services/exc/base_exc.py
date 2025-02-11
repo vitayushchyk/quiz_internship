@@ -95,6 +95,13 @@ class PermissionUserError(MeduzzenBaseHttpException):
         )
 
 
+class GeneralPermissionError(MeduzzenBaseHttpException):
+    def __init__(self):
+        super().__init__(
+            status_code=403, detail=f"Permission for this action was denied."
+        )
+
+
 class InvitationAlreadyExist(MeduzzenBaseHttpException):
     def __init__(self):
         super().__init__(
@@ -182,3 +189,8 @@ class InvalidAnswerError(MeduzzenBaseHttpException):
             status_code=400,
             detail=f"Number of answers does not match number of questions.",
         )
+
+
+class ResultNotFound(MeduzzenBaseHttpException):
+    def __init__(self):
+        super().__init__(status_code=404, detail=f"No results found")

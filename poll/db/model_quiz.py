@@ -307,3 +307,41 @@ class QuizRepository:
         result = await self.session.execute(query)
         avg_score = result.scalar()
         return avg_score if avg_score else 0.0
+
+    async def get_user_quiz_stats(
+        self,
+        user_id: int,
+        company_id: Optional[int] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ):
+        logger.info(
+            f"Fetching quiz stats for user_id={user_id}, company_id={company_id}. Page: {page}, Page Size: {page_size}"
+        )
+        query = select(QuizStat).where(QuizStat.user_id == user_id)
+        if company_id:
+            query = query.join(Quiz, QuizStat.quiz_id == Quiz.id).where(
+                Quiz.company_id == company_id
+            )
+        pagination = Pagination(self.session, query, page, page_size)
+        return await pagination.fetch_results()
+
+    async def get_results_for_quiz_d(
+        self, quiz_id: int, user_id: int = None, page: int = 1, page_size: int = 10
+    ):
+        query = select(QuizStat).where(QuizStat.quiz_id == quiz_id)
+        if user_id:
+            query = query.where(QuizStat.user_id == user_id)
+
+        query = query.limit(page_size).offset((page - 1) * page_size)
+
+        results = await self.session.execute(query)
+        return [
+            {
+                "user_id": result.user_id,
+                "score": result.score,
+                "attempts": result.total_questions,
+                "completed_at": result.attempted_at.isoformat(),
+            }
+            for result in results.scalars()
+        ]

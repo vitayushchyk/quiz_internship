@@ -1,3 +1,4 @@
+import enum
 from typing import List
 
 from pydantic import BaseModel, field_validator
@@ -105,3 +106,19 @@ class QuizResult(BaseModel):
 
 class AverageScoreRes(BaseModel):
     average_score: float
+
+
+class QuizExportResultJSON(BaseModel):
+    user_id: int
+    score: float
+    attempts: int
+    completed_at: str
+
+
+class QuizExportResults(BaseModel):
+    results: List[QuizExportResultJSON]
+
+
+class ResponseFormat(str, enum.Enum):
+    json = "json"
+    csv = "csv"
