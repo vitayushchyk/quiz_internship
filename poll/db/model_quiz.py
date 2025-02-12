@@ -11,6 +11,7 @@ from sqlalchemy import (
     Integer,
     String,
     UniqueConstraint,
+    desc,
     func,
     select,
 )
@@ -344,4 +345,64 @@ class QuizRepository:
                 "completed_at": result.attempted_at.isoformat(),
             }
             for result in results.scalars()
+        ]
+
+    async def get_user_test_scores(
+        self, user_id: int, page: int = 1, page_size: int = 10
+    ):
+        logger.info(
+            f"Fetching user test scores for user_id={user_id}, page={page}, page_size={page_size}."
+        )
+        query = (
+            select(
+                Quiz.id.label("quiz_id"),
+                Quiz.title.label("quiz_title"),
+                func.avg(QuizStat.score).label("average_score"),
+                func.count(QuizStat.id).label("attempts"),
+                func.max(QuizStat.attempted_at).label("last_attempt"),
+            )
+            .join(QuizStat, QuizStat.quiz_id == Quiz.id)
+            .where(QuizStat.user_id == user_id)
+            .group_by(Quiz.id, Quiz.title)
+            .order_by(desc(func.max(QuizStat.attempted_at)))
+        )
+        query = query.limit(page_size).offset((page - 1) * page_size)
+
+        results = await self.session.execute(query)
+
+        return results.mappings().all()
+
+    async def get_avg_scores_company_users(
+        self, company_id: int, time_period: str
+    ) -> list[dict]:
+
+        query = (
+            select(
+                QuizStat.user_id,
+                func.avg(QuizStat.score).label("average_score"),
+                func.count(QuizStat.id).label("attempts"),
+            )
+            .join(Quiz, Quiz.id == QuizStat.quiz_id)
+            .where(Quiz.company_id == company_id)
+        )
+
+        if time_period:
+            query = query.add_columns(
+                func.date_trunc(time_period, QuizStat.attempted_at).label("time_period")
+            ).group_by(QuizStat.user_id, "time_period")
+            query = query.order_by("time_period")
+        else:
+            query = query.group_by(QuizStat.user_id)
+
+        result = await self.session.execute(query)
+        rows = result.fetchall()
+
+        return [
+            {
+                "user_id": row.user_id,
+                "average_score": row.average_score,
+                "attempts": row.attempts,
+                "time_period": getattr(row, "time_period", None),
+            }
+            for row in rows
         ]

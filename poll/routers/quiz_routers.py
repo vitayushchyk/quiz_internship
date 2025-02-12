@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -23,8 +24,10 @@ from poll.schemas.quiz_shemas import (
     QuizResult,
     QuizStatusRes,
     ResponseFormat,
+    TimePeriodEnum,
     UpdateQuizReq,
     UpdateQuizRes,
+    UserRatingRes,
 )
 from poll.services.quiz_serv import QuizCRUD
 
@@ -311,3 +314,45 @@ async def export_quiz_results(
                 "Content-Disposition": f"attachment; filename=quiz_{quiz_id}_results.csv"
             },
         )
+
+
+from fastapi import HTTPException
+
+
+@quiz_router.get(
+    "/user/rating/{user_id}/",
+    description="User rating",
+    status_code=status.HTTP_200_OK,
+    response_model=UserRatingRes,
+)
+async def get_user_rating(
+    user_id: int,
+    page: int = 1,
+    page_size: int = 10,
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+    current_user: User = Depends(get_current_user),
+):
+
+    user_rating_data = await quiz_crud.get_user_overall_rating(
+        user_id=user_id, current_user=current_user.id, page=page, page_size=page_size
+    )
+    return user_rating_data
+
+
+@quiz_router.get(
+    "/company/{company_id}/average-scores/",
+    description="`Owner/Admin` retrieve average quiz scores for all users in company over a specified time period",
+    status_code=status.HTTP_200_OK,
+)
+async def get_average_scores(
+    company_id: int,
+    time_period: TimePeriodEnum,
+    current_user: User = Depends(get_current_user),
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+):
+    average_scores = await quiz_crud.get_avg_scores_in_time_period(
+        company_id=company_id,
+        admin_user_id=current_user.id,
+        time_period=time_period,
+    )
+    return average_scores
