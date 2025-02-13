@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from pydantic import parse_obj_as
 from redis.asyncio import Redis
+from starlette.responses import StreamingResponse
 
 from poll.core.deps import get_current_user, get_current_user_id, get_quiz_crud
 from poll.db.connection import get_redis_client
@@ -268,7 +269,7 @@ async def get_user_results_in_company(
 ):
     return await quiz_crud.get_user_results_in_company(
         company_id=company_id,
-        admin_user_id=current_user.id,
+        current_user_id=current_user.id,
         user_id=user_id,
         page=page,
         page_size=page_size,
