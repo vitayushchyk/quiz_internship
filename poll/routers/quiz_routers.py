@@ -1,10 +1,9 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from pydantic import parse_obj_as
 from redis.asyncio import Redis
-from starlette.responses import StreamingResponse
 
 from poll.core.deps import get_current_user, get_current_user_id, get_quiz_crud
 from poll.db.connection import get_redis_client
@@ -23,10 +22,14 @@ from poll.schemas.quiz_shemas import (
     QuizResult,
     QuizStatusRes,
     ResponseFormat,
+    TimePeriodEnum,
     UpdateQuizReq,
     UpdateQuizRes,
+    UserRatingRes,
 )
 from poll.services.quiz_serv import QuizCRUD
+
+# from starlette.responses import StreamingResponse
 
 quiz_router = APIRouter(prefix="/quiz", tags=["Quiz"])
 
@@ -251,7 +254,7 @@ async def get_company_quiz_results(
 
 
 @quiz_router.get(
-    "/companies/{company_id}/users/{user_id}/results",
+    "/company/{company_id}/user/{user_id}/results",
     description="`Owner/Admin` retrieve quiz-test results for a specific user in the specified company",
     status_code=status.HTTP_200_OK,
 )
@@ -273,7 +276,7 @@ async def get_user_results_in_company(
 
 
 @quiz_router.get(
-    "/{quiz_id}/export-results/",
+    "/{quiz_id}/export-quiz-result/",
     description="`Owner/Admin` export results of a specific quiz to CSV or JSON format",
     status_code=status.HTTP_200_OK,
 )
@@ -283,7 +286,6 @@ async def export_quiz_results(
     current_user: User = Depends(get_current_user),
     quiz_crud: QuizCRUD = Depends(get_quiz_crud),
 ):
-
     results = await quiz_crud.get_results_for_quiz(
         quiz_id=quiz_id,
         user_id=current_user.id,
@@ -311,3 +313,59 @@ async def export_quiz_results(
                 "Content-Disposition": f"attachment; filename=quiz_{quiz_id}_results.csv"
             },
         )
+
+
+@quiz_router.get(
+    "{user_id}/user-rating/",
+    description="User rating",
+    status_code=status.HTTP_200_OK,
+    response_model=UserRatingRes,
+)
+async def get_user_rating(
+    user_id: int,
+    page: int = 1,
+    page_size: int = 10,
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+    current_user: User = Depends(get_current_user),
+):
+    user_rating_data = await quiz_crud.get_user_overall_rating(
+        user_id=user_id, current_user=current_user.id, page=page, page_size=page_size
+    )
+    return user_rating_data
+
+
+@quiz_router.get(
+    "/company-average-scores/{company_id}/",
+    description="`Owner/Admin` retrieve average quiz scores for all users in company over a specified time period",
+    status_code=status.HTTP_200_OK,
+)
+async def get_average_scores(
+    company_id: int,
+    time_period: TimePeriodEnum,
+    current_user: User = Depends(get_current_user),
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+):
+    average_scores = await quiz_crud.get_avg_scores_in_time_period(
+        company_id=company_id,
+        admin_user_id=current_user.id,
+        time_period=time_period,
+    )
+    return average_scores
+
+
+@quiz_router.get(
+    "/company-user-last-attempts{company_id}/",
+    description="`Owner/Admin`  get all users of the company and the time of their last attempt to take the quiz",
+    status_code=status.HTTP_200_OK,
+)
+async def get_company_users_last_attempts(
+    company_id: int,
+    page: int = 1,
+    page_size: int = 10,
+    current_user: User = Depends(get_current_user),
+    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+):
+    user_attempts = await quiz_crud.get_company_users_last_attempt(
+        company_id=company_id, user_id=current_user.id, page=page, page_size=page_size
+    )
+    return user_attempts

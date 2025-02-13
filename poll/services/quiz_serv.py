@@ -10,6 +10,9 @@ from poll.schemas.quiz_shemas import (
     AttemptQuizRequest,
     CreateQuizReq,
     QuizResult,
+    TimePeriodEnum,
+    UserRatingRes,
+    UserTestRes,
 )
 from poll.services.exc.base_exc import (
     GeneralPermissionError,
@@ -79,7 +82,9 @@ class QuizCRUD:
             raise QuizFoundError(quiz_id=quiz_id)
 
         await self._check_permissions(
-            quiz.company_id, user_id, [CompanyRole.OWNER, CompanyRole.ADMIN]
+            company_id=quiz.company_id,
+            user_id=user_id,
+            required_roles=[CompanyRole.OWNER, CompanyRole.ADMIN],
         )
 
         updated_quiz = await self.quiz_repo.update_quiz_title(quiz=quiz, title=title)
@@ -91,9 +96,10 @@ class QuizCRUD:
             raise QuizFoundError(quiz_id=quiz_id)
 
         await self._check_permissions(
-            quiz.company_id, user_id, [CompanyRole.OWNER, CompanyRole.ADMIN]
+            company_id=quiz.company_id,
+            user_id=user_id,
+            required_roles=[CompanyRole.OWNER, CompanyRole.ADMIN],
         )
-
         updated_quiz = await self.quiz_repo.add_new_quiz_status(
             quiz=quiz, status=status
         )
@@ -111,7 +117,9 @@ class QuizCRUD:
         if not quiz:
             raise QuizFoundError(quiz_id=quiz_id)
         await self._check_permissions(
-            quiz.company_id, user_id, [CompanyRole.OWNER, CompanyRole.ADMIN]
+            company_id=quiz.company_id,
+            user_id=user_id,
+            required_roles=[CompanyRole.OWNER, CompanyRole.ADMIN],
         )
         await self.quiz_repo.delete_quiz(quiz_id=quiz_id)
         return None
@@ -205,7 +213,9 @@ class QuizCRUD:
         self, company_id: int, user_id: int, page: int = 1, page_size: int = 10
     ):
         await self._check_permissions(
-            company_id, user_id, [CompanyRole.OWNER, CompanyRole.ADMIN]
+            company_id=company_id,
+            user_id=user_id,
+            required_roles=[CompanyRole.OWNER, CompanyRole.ADMIN],
         )
         get_stat = await self.quiz_repo.get_user_quiz_stats(
             user_id=user_id, company_id=company_id, page=page, page_size=page_size
@@ -217,14 +227,15 @@ class QuizCRUD:
     async def get_user_results_in_company(
         self,
         company_id: int,
-        admin_user_id: int,
         user_id: int,
         page: int = 1,
         page_size: int = 10,
     ):
 
         await self._check_permissions(
-            company_id, admin_user_id, [CompanyRole.OWNER, CompanyRole.ADMIN]
+            company_id=company_id,
+            user_id=user_id,
+            required_roles=[CompanyRole.OWNER, CompanyRole.ADMIN],
         )
         get_stat = await self.quiz_repo.get_user_quiz_stats(
             user_id=user_id, company_id=company_id, page=page, page_size=page_size
@@ -247,6 +258,66 @@ class QuizCRUD:
         if user_id != current_user:
             raise GeneralPermissionError
 
-        return await self.quiz_repo.get_results_for_quiz_d(
+        return await self.quiz_repo.get_results_for_quiz(
             quiz_id=quiz_id, user_id=user_id, page=page, page_size=page_size
         )
+
+    async def get_user_overall_rating(
+        self, user_id: int, current_user: int, page: int = 1, page_size: int = 10
+    ) -> UserRatingRes:
+        if user_id != current_user:
+            raise GeneralPermissionError
+
+        overall_avg_score = await self.quiz_repo.get_avg_score(user_id=user_id)
+        test_scores = await self.quiz_repo.get_user_test_scores(
+            user_id=user_id, page=page, page_size=page_size
+        )
+
+        if not test_scores:
+            raise ResultNotFound()
+
+        return UserRatingRes(
+            overall_average_score=overall_avg_score,
+            tests=[
+                UserTestRes(
+                    quiz_id=test["quiz_id"],
+                    quiz_title=test["quiz_title"],
+                    average_score=test["average_score"],
+                    attempts=test["attempts"],
+                    last_attempt=test["last_attempt"].isoformat(),
+                )
+                for test in test_scores
+            ],
+        )
+
+    async def get_avg_scores_in_time_period(
+        self, company_id: int, admin_user_id: int, time_period: TimePeriodEnum
+    ):
+
+        await self._check_permissions(
+            company_id=company_id,
+            user_id=admin_user_id,
+            required_roles=[CompanyRole.OWNER, CompanyRole.ADMIN],
+        )
+        results = await self.quiz_repo.get_avg_scores_company_users(
+            company_id=company_id, time_period=time_period
+        )
+        if not results:
+            raise ResultNotFound()
+
+        return results
+
+    async def get_company_users_last_attempt(
+        self, company_id: int, user_id: int, page: int = 1, page_size: int = 10
+    ):
+        await self._check_permissions(
+            company_id=company_id,
+            user_id=user_id,
+            required_roles=[CompanyRole.OWNER, CompanyRole.ADMIN],
+        )
+        last_attempt = await self.quiz_repo.get_users_last_quiz_attempts(
+            company_id=company_id, page=page, page_size=page_size
+        )
+        if not last_attempt:
+            raise ResultNotFound()
+        return last_attempt

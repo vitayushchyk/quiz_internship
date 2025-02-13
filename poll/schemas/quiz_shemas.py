@@ -1,4 +1,5 @@
 import enum
+from enum import Enum
 from typing import List
 
 from pydantic import BaseModel, field_validator
@@ -122,3 +123,22 @@ class QuizExportResults(BaseModel):
 class ResponseFormat(str, enum.Enum):
     json = "json"
     csv = "csv"
+
+
+class UserTestRes(BaseModel):
+    quiz_id: int
+    quiz_title: str
+    average_score: float
+    attempts: int
+    last_attempt: str
+
+
+class UserRatingRes(BaseModel):
+    overall_average_score: float
+    tests: List[UserTestRes]
+
+
+class TimePeriodEnum(str, Enum):
+    WEEK = "week"
+    MONTH = "month"
+    YEAR = "year"
