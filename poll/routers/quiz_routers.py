@@ -1,11 +1,9 @@
-from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from pydantic import parse_obj_as
 from redis.asyncio import Redis
-from starlette.responses import StreamingResponse
 
 from poll.core.deps import get_current_user, get_current_user_id, get_quiz_crud
 from poll.db.connection import get_redis_client
@@ -31,6 +29,8 @@ from poll.schemas.quiz_shemas import (
 )
 from poll.services.quiz_serv import QuizCRUD
 
+# from starlette.responses import StreamingResponse
+
 quiz_router = APIRouter(prefix="/quiz", tags=["Quiz"])
 
 
@@ -41,10 +41,10 @@ quiz_router = APIRouter(prefix="/quiz", tags=["Quiz"])
     status_code=status.HTTP_201_CREATED,
 )
 async def create_quiz(
-    company_id: int,
-    data: CreateQuizReq,
-    current_user_id: int = Depends(get_current_user_id),
-    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+        company_id: int,
+        data: CreateQuizReq,
+        current_user_id: int = Depends(get_current_user_id),
+        quiz_crud: QuizCRUD = Depends(get_quiz_crud),
 ):
     quiz = await quiz_crud.create_quiz(
         company_id=company_id,
@@ -68,10 +68,10 @@ async def create_quiz(
     status_code=status.HTTP_200_OK,
 )
 async def update_quiz(
-    quiz_id: int,
-    title_req: UpdateQuizReq,
-    current_user_id: int = Depends(get_current_user_id),
-    quiz_service: "QuizCRUD" = Depends(get_quiz_crud),
+        quiz_id: int,
+        title_req: UpdateQuizReq,
+        current_user_id: int = Depends(get_current_user_id),
+        quiz_service: "QuizCRUD" = Depends(get_quiz_crud),
 ):
     new_title = title_req.new_title
     updated_quiz = await quiz_service.editing_quiz_title(
@@ -88,10 +88,10 @@ async def update_quiz(
     status_code=status.HTTP_200_OK,
 )
 async def update_quiz_status(
-    quiz_id: int,
-    status_data: QuizStatus,
-    current_user_id: int = Depends(get_current_user_id),
-    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+        quiz_id: int,
+        status_data: QuizStatus,
+        current_user_id: int = Depends(get_current_user_id),
+        quiz_crud: QuizCRUD = Depends(get_quiz_crud),
 ):
     updated_quiz = await quiz_crud.adding_new_quiz_status(
         quiz_id=quiz_id, user_id=current_user_id, status=status_data
@@ -113,10 +113,10 @@ async def update_quiz_status(
     status_code=status.HTTP_200_OK,
 )
 async def get_quizzes_by_status(
-    status: QuizStatus,
-    page: int = 1,
-    page_size: int = 1,
-    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+        status: QuizStatus,
+        page: int = 1,
+        page_size: int = 1,
+        quiz_crud: QuizCRUD = Depends(get_quiz_crud),
 ):
     quizzes = await quiz_crud.all_quiz_by_status(status, page=page, page_size=page_size)
     return [
@@ -138,9 +138,9 @@ async def get_quizzes_by_status(
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_quiz(
-    quiz_id: int,
-    current_user_id: int = Depends(get_current_user_id),
-    quiz_service: QuizCRUD = Depends(get_quiz_crud),
+        quiz_id: int,
+        current_user_id: int = Depends(get_current_user_id),
+        quiz_service: QuizCRUD = Depends(get_quiz_crud),
 ):
     await quiz_service.delete_quiz(quiz_id=quiz_id, user_id=current_user_id)
     return
@@ -153,10 +153,10 @@ async def delete_quiz(
     status_code=status.HTTP_200_OK,
 )
 async def take_quiz(
-    attempt_data: AttemptQuizRequest,
-    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
-    redis: Redis = Depends(get_redis_client),
-    current_user: User = Depends(get_current_user),
+        attempt_data: AttemptQuizRequest,
+        quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+        redis: Redis = Depends(get_redis_client),
+        current_user: User = Depends(get_current_user),
 ):
     attempt_results = await quiz_crud.take_quiz(
         user_id=current_user.id, data=attempt_data, redis=redis
@@ -171,9 +171,9 @@ async def take_quiz(
     response_model=AverageScoreRes,
 )
 async def get_average_score(
-    user_id: int = Depends(get_current_user_id),
-    company_id: Optional[int] = None,
-    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+        user_id: int = Depends(get_current_user_id),
+        company_id: Optional[int] = None,
+        quiz_crud: QuizCRUD = Depends(get_quiz_crud),
 ):
     if company_id:
         avg_score = await quiz_crud.quiz_repo.get_avg_score(
@@ -191,8 +191,8 @@ async def get_average_score(
     response_model=PublicQuizRes,
 )
 async def get_quiz_by_id(
-    quiz_id: int,
-    quiz_service: QuizCRUD = Depends(get_quiz_crud),
+        quiz_id: int,
+        quiz_service: QuizCRUD = Depends(get_quiz_crud),
 ):
     quiz = await quiz_service.get_quiz_by_id(quiz_id=quiz_id)
 
@@ -222,11 +222,11 @@ async def get_quiz_by_id(
     status_code=status.HTTP_200_OK,
 )
 async def get_user_quiz_results(
-    user_id: int,
-    page: int = 1,
-    page_size: int = 10,
-    current_user: User = Depends(get_current_user),
-    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+        user_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        current_user: User = Depends(get_current_user),
+        quiz_crud: QuizCRUD = Depends(get_quiz_crud),
 ):
     return await quiz_crud.get_user_results(
         user_id=user_id, current_user=current_user.id, page=page, page_size=page_size
@@ -239,11 +239,11 @@ async def get_user_quiz_results(
     status_code=status.HTTP_200_OK,
 )
 async def get_company_quiz_results(
-    company_id: int,
-    page: int = 1,
-    page_size: int = 10,
-    current_user: User = Depends(get_current_user),
-    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+        company_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        current_user: User = Depends(get_current_user),
+        quiz_crud: QuizCRUD = Depends(get_quiz_crud),
 ):
     return await quiz_crud.get_company_results(
         company_id=company_id,
@@ -254,17 +254,17 @@ async def get_company_quiz_results(
 
 
 @quiz_router.get(
-    "/companies/{company_id}/users/{user_id}/results",
+    "/company/{company_id}/user/{user_id}/results",
     description="`Owner/Admin` retrieve quiz-test results for a specific user in the specified company",
     status_code=status.HTTP_200_OK,
 )
 async def get_user_results_in_company(
-    company_id: int,
-    user_id: int,
-    page: int = 1,
-    page_size: int = 10,
-    current_user: User = Depends(get_current_user),
-    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+        company_id: int,
+        user_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        current_user: User = Depends(get_current_user),
+        quiz_crud: QuizCRUD = Depends(get_quiz_crud),
 ):
     return await quiz_crud.get_user_results_in_company(
         company_id=company_id,
@@ -276,17 +276,16 @@ async def get_user_results_in_company(
 
 
 @quiz_router.get(
-    "/{quiz_id}/export-results/",
+    "/{quiz_id}/export-quiz-result/",
     description="`Owner/Admin` export results of a specific quiz to CSV or JSON format",
     status_code=status.HTTP_200_OK,
 )
 async def export_quiz_results(
-    quiz_id: int,
-    response_format: ResponseFormat = ResponseFormat.csv,
-    current_user: User = Depends(get_current_user),
-    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+        quiz_id: int,
+        response_format: ResponseFormat = ResponseFormat.csv,
+        current_user: User = Depends(get_current_user),
+        quiz_crud: QuizCRUD = Depends(get_quiz_crud),
 ):
-
     results = await quiz_crud.get_results_for_quiz(
         quiz_id=quiz_id,
         user_id=current_user.id,
@@ -316,23 +315,19 @@ async def export_quiz_results(
         )
 
 
-from fastapi import HTTPException
-
-
 @quiz_router.get(
-    "/user/rating/{user_id}/",
+    "{user_id}/user-rating/",
     description="User rating",
     status_code=status.HTTP_200_OK,
     response_model=UserRatingRes,
 )
 async def get_user_rating(
-    user_id: int,
-    page: int = 1,
-    page_size: int = 10,
-    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
-    current_user: User = Depends(get_current_user),
+        user_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+        current_user: User = Depends(get_current_user),
 ):
-
     user_rating_data = await quiz_crud.get_user_overall_rating(
         user_id=user_id, current_user=current_user.id, page=page, page_size=page_size
     )
@@ -340,15 +335,15 @@ async def get_user_rating(
 
 
 @quiz_router.get(
-    "/company/{company_id}/average-scores/",
+    "/company-average-scores/{company_id}/",
     description="`Owner/Admin` retrieve average quiz scores for all users in company over a specified time period",
     status_code=status.HTTP_200_OK,
 )
 async def get_average_scores(
-    company_id: int,
-    time_period: TimePeriodEnum,
-    current_user: User = Depends(get_current_user),
-    quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+        company_id: int,
+        time_period: TimePeriodEnum,
+        current_user: User = Depends(get_current_user),
+        quiz_crud: QuizCRUD = Depends(get_quiz_crud),
 ):
     average_scores = await quiz_crud.get_avg_scores_in_time_period(
         company_id=company_id,
@@ -356,3 +351,21 @@ async def get_average_scores(
         time_period=time_period,
     )
     return average_scores
+
+
+@quiz_router.get(
+    "/company-user-last-attempts{company_id}/",
+    description="`Owner/Admin`  get all users of the company and the time of their last attempt to take the quiz",
+    status_code=status.HTTP_200_OK,
+)
+async def get_company_users_last_attempts(
+        company_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        current_user: User = Depends(get_current_user),
+        quiz_crud: QuizCRUD = Depends(get_quiz_crud),
+):
+    user_attempts = await quiz_crud.get_company_users_last_attempt(
+        company_id=company_id, user_id=current_user.id, page=page, page_size=page_size
+    )
+    return user_attempts

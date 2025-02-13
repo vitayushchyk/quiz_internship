@@ -142,11 +142,11 @@ class QuizRepository:
         self.session = session
 
     async def add_quiz(
-        self,
-        company_id: int,
-        user_id: int,
-        title: str,
-        description: Optional[str] = None,
+            self,
+            company_id: int,
+            user_id: int,
+            title: str,
+            description: Optional[str] = None,
     ) -> Quiz:
         logger.info(
             f"Adding a new quiz for company_id={company_id} by user_id={user_id}. Title: {title}"
@@ -177,7 +177,7 @@ class QuizRepository:
         return new_question
 
     async def add_question_option(
-        self, question_id: int, option_text: str, is_correct: bool = False
+            self, question_id: int, option_text: str, is_correct: bool = False
     ) -> QuestionOption:
         logger.info(
             f"Adding a new option to question_id={question_id}. Option Text: '{option_text}', Is Correct: {is_correct}"
@@ -205,9 +205,9 @@ class QuizRepository:
         return result.scalar()
 
     async def update_quiz_title(
-        self,
-        quiz: Quiz,
-        title: str,
+            self,
+            quiz: Quiz,
+            title: str,
     ) -> Quiz:
         logger.info(f"Updating quiz id={quiz.id}. New Title: {title}")
 
@@ -217,9 +217,9 @@ class QuizRepository:
         return quiz
 
     async def add_new_quiz_status(
-        self,
-        quiz: Quiz,
-        status: QuizStatus,
+            self,
+            quiz: Quiz,
+            status: QuizStatus,
     ) -> Quiz:
         logger.info(f"Updating status of quiz id={quiz.id} to {status}")
 
@@ -230,7 +230,7 @@ class QuizRepository:
         return quiz
 
     async def get_quizzes_by_status(
-        self, status: QuizStatus, page: int = 1, page_size: int = 20
+            self, status: QuizStatus, page: int = 1, page_size: int = 20
     ) -> Sequence[Any]:
         logger.info(
             f"Fetching quizzes with status={status}. Page: {page}, Page Size: {page_size}"
@@ -254,7 +254,7 @@ class QuizRepository:
         return None
 
     async def save_quiz_attempt(
-        self, quiz: int, user_id: int, correct_answer: int, total_questions: int
+            self, quiz: int, user_id: int, correct_answer: int, total_questions: int
     ):
         logger.info(
             f"Saving quiz attempt for quiz={quiz}, user_id={user_id}, correct_answer={correct_answer}, total_questions={total_questions},"
@@ -287,7 +287,7 @@ class QuizRepository:
             await self.session.commit()
 
     async def get_avg_score(
-        self, user_id: int, company_id: Optional[int] = None
+            self, user_id: int, company_id: Optional[int] = None
     ) -> float:
         logger.info(
             f"Calculating average score for user_id={user_id}, company_id={company_id}"
@@ -310,11 +310,11 @@ class QuizRepository:
         return avg_score if avg_score else 0.0
 
     async def get_user_quiz_stats(
-        self,
-        user_id: int,
-        company_id: Optional[int] = None,
-        page: int = 1,
-        page_size: int = 20,
+            self,
+            user_id: int,
+            company_id: Optional[int] = None,
+            page: int = 1,
+            page_size: int = 20,
     ):
         logger.info(
             f"Fetching quiz stats for user_id={user_id}, company_id={company_id}. Page: {page}, Page Size: {page_size}"
@@ -327,8 +327,8 @@ class QuizRepository:
         pagination = Pagination(self.session, query, page, page_size)
         return await pagination.fetch_results()
 
-    async def get_results_for_quiz_d(
-        self, quiz_id: int, user_id: int = None, page: int = 1, page_size: int = 10
+    async def get_results_for_quiz(
+            self, quiz_id: int, user_id: int = None, page: int = 1, page_size: int = 10
     ):
         query = select(QuizStat).where(QuizStat.quiz_id == quiz_id)
         if user_id:
@@ -348,7 +348,7 @@ class QuizRepository:
         ]
 
     async def get_user_test_scores(
-        self, user_id: int, page: int = 1, page_size: int = 10
+            self, user_id: int, page: int = 1, page_size: int = 10
     ):
         logger.info(
             f"Fetching user test scores for user_id={user_id}, page={page}, page_size={page_size}."
@@ -373,8 +373,11 @@ class QuizRepository:
         return results.mappings().all()
 
     async def get_avg_scores_company_users(
-        self, company_id: int, time_period: str
+            self, company_id: int, time_period: str
     ) -> list[dict]:
+        logger.info(
+            f"Fetching average scores for users in company_id={company_id} with time_period={time_period}"
+        )
 
         query = (
             select(
@@ -405,4 +408,26 @@ class QuizRepository:
                 "time_period": getattr(row, "time_period", None),
             }
             for row in rows
+        ]
+
+    async def get_users_last_quiz_attempts(
+            self, company_id: int, page: int = 1, page_size: int = 10
+    ):
+        logger.info(
+            f"Fetching last quiz attempts for users in company_id={company_id}, page={page}, page_size={page_size}"
+        )
+
+        query = (
+            select(
+                QuizStat.user_id, func.max(QuizStat.attempted_at).label("last_attempt")
+            )
+            .join(Quiz, Quiz.id == QuizStat.quiz_id)
+            .where(Quiz.company_id == company_id)
+            .group_by(QuizStat.user_id)
+        )
+        query = query.limit(page_size).offset((page - 1) * page_size)
+
+        result = await self.session.execute(query)
+        return [
+            {"user_id": row.user_id, "last_attempt": row.last_attempt} for row in result
         ]
