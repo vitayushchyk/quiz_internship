@@ -25,27 +25,27 @@ from poll.services.exc.base_exc import (
 
 class QuizCRUD:
     def __init__(
-            self,
-            quiz_repo,
-            company_repo,
-            user_repo,
+        self,
+        quiz_repo,
+        company_repo,
+        user_repo,
     ):
         self.quiz_repo = quiz_repo
         self.company_repo = company_repo
         self.user_repo = user_repo
 
     async def _check_permissions(
-            self, company_id: int, user_id: int, required_roles: list[str]
+        self, company_id: int, user_id: int, required_roles: list[str]
     ):
         get_user_role = await self.company_repo.get_user_role(company_id, user_id)
         if not get_user_role or get_user_role.role not in required_roles:
             raise PermissionDeniedError(required_roles=required_roles)
 
     async def create_quiz(
-            self,
-            company_id: int,
-            user_id: int,
-            quiz_data: CreateQuizReq,
+        self,
+        company_id: int,
+        user_id: int,
+        quiz_data: CreateQuizReq,
     ):
 
         await self._check_permissions(
@@ -106,7 +106,7 @@ class QuizCRUD:
         return updated_quiz
 
     async def all_quiz_by_status(
-            self, status: QuizStatus, page: int = 1, page_size: int = 20
+        self, status: QuizStatus, page: int = 1, page_size: int = 20
     ):
         return await self.quiz_repo.get_quizzes_by_status(
             status=status, page=page, page_size=page_size
@@ -201,7 +201,7 @@ class QuizCRUD:
         return quiz
 
     async def get_user_results(
-            self, user_id: int, current_user: int, page: int = 1, page_size: int = 10
+        self, user_id: int, current_user: int, page: int = 1, page_size: int = 10
     ):
         if user_id != current_user:
             raise GeneralPermissionError
@@ -210,7 +210,7 @@ class QuizCRUD:
         )
 
     async def get_company_results(
-            self, company_id: int, user_id: int, page: int = 1, page_size: int = 10
+        self, company_id: int, user_id: int, page: int = 1, page_size: int = 10
     ):
         await self._check_permissions(
             company_id=company_id,
@@ -225,11 +225,11 @@ class QuizCRUD:
         return get_stat
 
     async def get_user_results_in_company(
-            self,
-            company_id: int,
-            user_id: int,
-            page: int = 1,
-            page_size: int = 10,
+        self,
+        company_id: int,
+        user_id: int,
+        page: int = 1,
+        page_size: int = 10,
     ):
 
         await self._check_permissions(
@@ -245,12 +245,12 @@ class QuizCRUD:
         return get_stat
 
     async def get_results_for_quiz(
-            self,
-            quiz_id: int,
-            user_id: int,
-            current_user: int,
-            page: int = 1,
-            page_size: int = 10,
+        self,
+        quiz_id: int,
+        user_id: int,
+        current_user: int,
+        page: int = 1,
+        page_size: int = 10,
     ):
         quiz = await self.quiz_repo.get_quiz(quiz_id)
         if quiz is None:
@@ -263,7 +263,7 @@ class QuizCRUD:
         )
 
     async def get_user_overall_rating(
-            self, user_id: int, current_user: int, page: int = 1, page_size: int = 10
+        self, user_id: int, current_user: int, page: int = 1, page_size: int = 10
     ) -> UserRatingRes:
         if user_id != current_user:
             raise GeneralPermissionError
@@ -291,7 +291,7 @@ class QuizCRUD:
         )
 
     async def get_avg_scores_in_time_period(
-            self, company_id: int, admin_user_id: int, time_period: TimePeriodEnum
+        self, company_id: int, admin_user_id: int, time_period: TimePeriodEnum
     ):
 
         await self._check_permissions(
@@ -308,7 +308,7 @@ class QuizCRUD:
         return results
 
     async def get_company_users_last_attempt(
-            self, company_id: int, user_id: int, page: int = 1, page_size: int = 10
+        self, company_id: int, user_id: int, page: int = 1, page_size: int = 10
     ):
         await self._check_permissions(
             company_id=company_id,
