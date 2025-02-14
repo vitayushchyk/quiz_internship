@@ -228,13 +228,14 @@ class QuizCRUD:
         self,
         company_id: int,
         user_id: int,
+        current_user_id: int,
         page: int = 1,
         page_size: int = 10,
     ):
 
         await self._check_permissions(
             company_id=company_id,
-            user_id=user_id,
+            user_id=current_user_id,
             required_roles=[CompanyRole.OWNER, CompanyRole.ADMIN],
         )
         get_stat = await self.quiz_repo.get_user_quiz_stats(

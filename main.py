@@ -8,6 +8,7 @@ from poll.routers.auth_routers import router_auth
 from poll.routers.company_routers import company_router
 from poll.routers.health_check_routers import health_check_router
 from poll.routers.invite_routers import invite_router
+from poll.routers.notification_routers import notification_router
 from poll.routers.quiz_routers import quiz_router
 from poll.routers.user_routers import user_router
 
@@ -37,3 +38,4 @@ app.include_router(company_router)
 app.include_router(invite_router)
 
 app.include_router(quiz_router)
+app.include_router(notification_router)

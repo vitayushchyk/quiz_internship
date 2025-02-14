@@ -48,6 +48,9 @@ class User(Base):
     quiz_stats: Mapped[list["QuizStat"]] = relationship(
         "QuizStat", back_populates="user", cascade="all, delete-orphan"
     )
+    notifications = relationship(
+        "Notification", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class UniqueViolation(Exception): ...

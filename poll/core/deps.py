@@ -1,16 +1,17 @@
 from typing import Annotated, Any, AsyncGenerator
 
 from fastapi import Depends
-from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from poll.db.connection import RedisDependency, get_async_session
 from poll.db.model_company import CompanyRepository
 from poll.db.model_invite import InviteRepository
+from poll.db.model_notification import NotificationRepository
 from poll.db.model_quiz import QuizRepository
 from poll.db.model_users import User, UserRepository
 from poll.schemas.user_schemas import oauth2_scheme
 from poll.services.invite_serv import InviteCRUD
+from poll.services.notification_ser import NotificationCRUD
 from poll.services.password_hasher import PasswordHasher
 from poll.services.quiz_serv import QuizCRUD
 from poll.services.user_serv import UserCRUD
@@ -82,3 +83,17 @@ async def get_quiz_crud(
     user_repository: UserRepository = Depends(get_user_repository),
 ) -> AsyncGenerator[QuizCRUD, None]:
     yield QuizCRUD(quiz_repository, company_repository, user_repository)
+
+
+async def get_notification_repository(
+    session: AsyncSession = Depends(get_async_session),
+) -> AsyncGenerator[NotificationRepository, None]:
+    yield NotificationRepository(session)
+
+
+async def get_notification_crud(
+    notification_repository: NotificationRepository = Depends(
+        get_notification_repository
+    ),
+) -> AsyncGenerator[NotificationCRUD, None]:
+    yield NotificationCRUD(notification_repository)
