@@ -30,8 +30,6 @@ from poll.schemas.quiz_shemas import (
 )
 from poll.services.quiz_serv import QuizCRUD
 
-# from starlette.responses import StreamingResponse
-
 quiz_router = APIRouter(prefix="/quiz", tags=["Quiz"])
 
 

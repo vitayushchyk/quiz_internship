@@ -431,3 +431,13 @@ class QuizRepository:
         return [
             {"user_id": row.user_id, "last_attempt": row.last_attempt} for row in result
         ]
+
+    async def get_last_attempts_for_all_users(self):
+        logger.info("Fetching last attempts for all users")
+        query = select(
+            QuizStat.user_id,
+            QuizStat.quiz_id,
+            func.max(QuizStat.attempted_at).label("last_attempt"),
+        ).group_by(QuizStat.user_id, QuizStat.quiz_id)
+        result = await self.session.execute(query)
+        return result.fetchall()

@@ -1,3 +1,4 @@
+from poll.db.model_notification import NotificationStatus
 from poll.schemas.notification_schemas import NotificationDetail, NotifStatus
 from poll.services.exc.base_exc import GeneralPermissionError, ResultNotFound
 
@@ -36,4 +37,11 @@ class NotificationCRUD:
             raise ResultNotFound()
         return NotifStatus(
             notification_id=notification.id, status=notification.status_notif
+        )
+
+    async def create_notification(
+        self, user_id: int, text: str, status: NotificationStatus.NEW
+    ):
+        return await self.notification_repo.add_notification(
+            user_id=user_id, text=text, status=status
         )
