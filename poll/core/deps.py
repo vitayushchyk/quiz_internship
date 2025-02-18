@@ -14,6 +14,7 @@ from poll.services.invite_serv import InviteCRUD
 from poll.services.notification_ser import NotificationCRUD
 from poll.services.password_hasher import PasswordHasher
 from poll.services.quiz_serv import QuizCRUD
+from poll.services.scheduler_ser import SchedulerService
 from poll.services.user_serv import UserCRUD
 
 
@@ -97,3 +98,24 @@ async def get_notification_crud(
     ),
 ) -> AsyncGenerator[NotificationCRUD, None]:
     yield NotificationCRUD(notification_repository)
+
+
+async def get_scheduler() -> SchedulerService:
+    async_session_generator = get_async_session()
+
+    try:
+
+        session = await anext(async_session_generator)
+        quiz_repository = QuizRepository(session)
+        notification_repository = NotificationRepository(session)
+        user_repository = UserRepository(session)
+        company_repository = CompanyRepository(session)
+        quiz_service = QuizCRUD(quiz_repository, company_repository, user_repository)
+        notification_service = NotificationCRUD(notification_repository)
+
+        return SchedulerService(
+            quiz_service=quiz_service, notification_service=notification_service
+        )
+
+    finally:
+        await async_session_generator.aclose()

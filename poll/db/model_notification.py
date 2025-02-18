@@ -2,7 +2,16 @@ import datetime
 from enum import Enum
 from typing import Sequence
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, func, select
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    func,
+    insert,
+    select,
+)
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import relationship
@@ -72,3 +81,19 @@ class NotificationRepository:
         await self.session.commit()
 
         return notification
+
+    async def add_notification(
+        self, user_id: int, text: str, status: NotificationStatus
+    ):
+        query = (
+            insert(Notification)
+            .values(
+                user_id=user_id,
+                text=text,
+                status_notif=status,
+            )
+            .returning(Notification)
+        )
+        result = await self.session.execute(query)
+        await self.session.commit()
+        return result.fetchone()

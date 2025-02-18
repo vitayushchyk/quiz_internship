@@ -322,3 +322,6 @@ class QuizCRUD:
         if not last_attempt:
             raise ResultNotFound()
         return last_attempt
+
+    async def get_last_attempts_for_all_users(self):
+        return await self.quiz_repo.get_last_attempts_for_all_users()
