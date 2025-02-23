@@ -70,7 +70,7 @@ async def decline_invite_to_user(
 
 
 @invite_router.get(
-    "",
+    "/",
     response_model=List[InviteRes],
     description="Get all invites with status `PENDING` for the current user.",
 )
