@@ -115,7 +115,7 @@ def test_change_visibility_fail_not_exist(client, auth_headers):
     assert response.json()["detail"] == "Company with ID 100 not found."
 
 
-def test_change_visibility_not_rith_status(client, auth_headers, existing_company):
+def test_change_visibility_not_right_status(client, auth_headers, existing_company):
     company_id = existing_company["id"]
     response = client.post(
         f"/company/change-visibility/{company_id}/",

@@ -20,6 +20,7 @@ auth0-python = "^4.7.2"
 redis = "^5.2.1"
 apscheduler = "^3.11.0"
 
+
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
 isort = "^5.13.2"
