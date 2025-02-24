@@ -1,6 +1,14 @@
-# **Meduzzen intership**
+# **Quiz**
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&pause=1000&color=008000&vCenter=true&random=false&width=600&lines=This+is+an+upcoming+app+that+will+be+used,;to+survey+the+company's+employees!)](https://git.io/typing-svg)
+## Overview
+
+[Quiz](http://ec2-3-75-177-31.eu-central-1.compute.amazonaws.com:8080/docs#/) is an interactive application for
+conducting tests, surveys or training quizzes.
+shopping.
+
+## Tech Stack
+
+[![Stack](https://skillicons.dev/icons?i=python,docker,postgres,fastapi,aws,redis&theme=dark&perline=10)](https://skillicons.dev)
 
 ## Installation:
 
@@ -68,6 +76,10 @@ In this project used [Poetry](https://python-poetry.org/) environment
 
       poetry add <package_name>
 
+### Deployment
+
+- This project is deployed on [AWS](https://aws.amazon.com).
+
 ## Contributors:
 
-- [Vita Yushchyk](https://github.com/vitayushchyk)
+- [Vita Yushchyk](https://www.linkedin.com/in/vita-yushchyk-484680205/)
